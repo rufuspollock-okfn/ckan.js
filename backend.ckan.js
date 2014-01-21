@@ -27,8 +27,12 @@ this.recline.Backend.Ckan = this.recline.Backend.Ckan || {};
 
   my.__type__ = 'ckan';
 
-  // private - use either jQuery or Underscore Deferred depending on what is available
-  var Deferred = _.isUndefined(this.jQuery) ? _.Deferred : jQuery.Deferred;
+
+  // use either jQuery or Underscore Deferred depending on what is available
+  var underscoreOrJquery = this.jQuery || this._;
+  var _map = underscoreOrJquery.map;
+  var _each = underscoreOrJquery.each;
+  var _deferred = underscoreOrJquery.Deferred;
 
   // Default CKAN API endpoint used for requests (you can change this but it will affect every request!)
   //
@@ -45,11 +49,11 @@ this.recline.Backend.Ckan = this.recline.Backend.Ckan || {};
       dataset.id = out.resource_id;
       wrapper = my.DataStore(out.endpoint);
     }
-    var dfd = new Deferred();
+    var dfd = new _deferred();
     var jqxhr = wrapper.search({resource_id: dataset.id, limit: 0});
     jqxhr.done(function(results) {
       // map ckan types to our usual types ...
-      var fields = _.map(results.result.fields, function(field) {
+      var fields = _map(results.result.fields, function(field) {
         field.type = field.type in CKAN_TYPES_MAP ? CKAN_TYPES_MAP[field.type] : field.type;
         return field;
       });
@@ -73,14 +77,14 @@ this.recline.Backend.Ckan = this.recline.Backend.Ckan || {};
     };
 
     if (queryObj.sort && queryObj.sort.length > 0) {
-      var _tmp = _.map(queryObj.sort, function(sortObj) {
+      var _tmp = _map(queryObj.sort, function(sortObj) {
         return sortObj.field + ' ' + (sortObj.order || '');
       });
       actualQuery.sort = _tmp.join(',');
     }
 
     if (queryObj.filters && queryObj.filters.length > 0) {
-      _.each(queryObj.filters, function(filter) {
+      _each(queryObj.filters, function(filter) {
         if (filter.type === "term") {
           actualQuery.filters[filter.field] = filter.term;
         }
@@ -99,7 +103,7 @@ this.recline.Backend.Ckan = this.recline.Backend.Ckan || {};
       wrapper = my.DataStore(out.endpoint);
     }
     var actualQuery = my._normalizeQuery(queryObj, dataset);
-    var dfd = new Deferred();
+    var dfd = new _deferred();
     var jqxhr = wrapper.search(actualQuery);
     jqxhr.done(function(results) {
       var out = {
