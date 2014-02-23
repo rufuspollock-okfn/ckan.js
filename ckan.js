@@ -1,9 +1,5 @@
 var CKAN = {};
 
-var recline = recline || {};
-recline.Backend = recline.Backend || {};
-recline.Backend.Ckan = recline.Backend.Ckan || {};
-
 (function(my) {
   // ## CKAN Backend
   //
