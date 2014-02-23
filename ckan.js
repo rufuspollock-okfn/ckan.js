@@ -34,6 +34,8 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
   // @param endpoint: CKAN api endpoint (e.g. http://datahub.io/api)
   my.DataStore = function(endpoint) { 
     this.endpoint = endpoint || my.API_ENDPOINT;
+    this.endpoint = this.endpoint.replace(/\/$/, '');
+    // TODO: ? add /api if not present
   };
 
   // Raw action search function
@@ -62,6 +64,25 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
       cb(null, out);
     });
   };
+
+  my.DataStore.prototype.listResources = function(cb) {
+    var resourceListUrl = this.endpoint + '/3/action/datastore_search?resource_id=_table_metadata';
+    _get({url: resourceListUrl}, cb);
+  }
+
+  var _get = function(options, cb) {
+    options.success = function(data) {
+      cb(null, data);
+    }
+    options.error = function(obj, obj2, obj3) {
+      var err = {
+        code: obj.statusCode,
+        message: obj2
+      }
+      cb(err); 
+    }
+    var jqxhr = jQuery.ajax(options);
+  }
 
   // only put in the module namespace so we can access for tests!
   my._normalizeQuery = function(queryObj, dataset) {
@@ -166,5 +187,5 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
     'int8': 'integer',
     'float8': 'float'
   };
-}(this.recline.Backend.Ckan));
+}(recline.Backend.Ckan));
 
