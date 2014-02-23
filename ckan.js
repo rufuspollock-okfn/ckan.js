@@ -33,22 +33,23 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
   //
   // @param endpoint: CKAN api endpoint (e.g. http://datahub.io/api)
   my.DataStore = function(endpoint) { 
-    var that = {endpoint: endpoint || my.API_ENDPOINT};
+    this.endpoint = endpoint || my.API_ENDPOINT;
+  };
 
-    // Raw action search function
-    //
-    // search({resource_id: ..., limit: 0})
-    that.search = function(data) {
-      var searchUrl = that.endpoint + '/3/action/datastore_search';
-      var jqxhr = jQuery.ajax({
-        url: searchUrl,
-        type: 'POST',
-        data: JSON.stringify(data)
-      });
-      return jqxhr;
-    };
-
-    return that;
+  // Raw action search function
+  //
+  // search({resource_id: ..., limit: 0})
+  my.DataStore.prototype.search = function(data, cb) {
+    var searchUrl = this.endpoint + '/3/action/datastore_search';
+    var jqxhr = jQuery.ajax({
+      url: searchUrl,
+      type: 'POST',
+      data: JSON.stringify(data),
+      success: function(data) {
+        cb(null, data)
+      },
+      error: cb
+    });
   };
 
   my.DataStore.prototype.query = function(queryObj, cb) {
@@ -124,15 +125,28 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
   my.fetch = function(dataset) {
     var wrapper;
     if (dataset.endpoint) {
-      wrapper = my.DataStore(dataset.endpoint);
+      wrapper = new my.DataStore(dataset.endpoint);
     } else {
       var out = CKAN._parseCkanResourceUrl(dataset.url);
       dataset.id = out.resource_id;
-      wrapper = CKAN.DataStore(out.endpoint);
+      wrapper = new CKAN.DataStore(out.endpoint);
     }
     var dfd = new Deferred();
-    var jqxhr = wrapper.search({resource_id: dataset.id, limit: 0});
-    jqxhr.done(function(results) {
+    return my.query({resource_id: dataset.id, limit: 0}, dataset);
+  };
+
+  my.query = function(queryObj, dataset) {
+    var dfd = new Deferred()
+      , wrapper
+      ;
+    if (dataset.endpoint) {
+      wrapper = new CKAN.DataStore(dataset.endpoint);
+    } else {
+      var out = CKAN._parseCkanResourceUrl(dataset.url);
+      dataset.id = out.resource_id;
+      wrapper = new CKAN.DataStore(out.endpoint);
+    }
+    wrapper.search(queryObj, function(err, results) {
       // map ckan types to our usual types ...
       var fields = _.map(results.result.fields, function(field) {
         field.type = field.type in CKAN_TYPES_MAP ? CKAN_TYPES_MAP[field.type] : field.type;
@@ -143,21 +157,6 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
         useMemoryStore: false
       };
       dfd.resolve(out);  
-    });
-    return dfd.promise();
-  };
-
-  my.query = function(queryObj, dataset) {
-    var wrapper;
-    if (dataset.endpoint) {
-      wrapper = my.DataStore(dataset.endpoint);
-    } else {
-      var out = CKAN._parseCkanResourceUrl(dataset.url);
-      dataset.id = out.resource_id;
-      wrapper = my.DataStore(out.endpoint);
-    }
-    wrapper.search(queryObj, function(err, data) {
-      dfd.resolve(data);  
     });
     return dfd.promise();
   };

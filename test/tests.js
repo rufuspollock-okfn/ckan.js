@@ -38,26 +38,28 @@ test('_normalizeQuery', function() {
   deepEqual(out, exp);
 });
 
-test("fetch", function() { 
-  var dataset = {
-    url: 'http://localhost:5000/dataset/test-data-viewer/resource/4f1299ab-a100-4e5f-ba81-e6d234a2f3bd',
-    backend: 'ckan'
-  };
 
+function setup() {
   var stub = sinon.stub($, 'ajax', function(options) {
     if (options.url.indexOf('datastore_search') != -1) {
-      return {
-        done: function(callback) {
-          callback(sample_data);
-          return this;
-        },
-        fail: function() {
-        }
-      };
+      options.success(sample_data);
     }
   });
+}
 
-  recline.Backend.Ckan.fetch(dataset).done(function(result) {
+function teardown() {
+  $.ajax.restore();
+}
+
+var datasetFixture = {
+  url: 'http://localhost:5000/dataset/test-data-viewer/resource/4f1299ab-a100-4e5f-ba81-e6d234a2f3bd',
+  backend: 'ckan'
+};
+
+test("fetch", function() { 
+  setup();
+
+  recline.Backend.Ckan.fetch(datasetFixture).done(function(result) {
     deepEqual(
       _.pluck(result.fields, 'id'),
       _.pluck(sample_data.result.fields, 'id')
@@ -73,7 +75,31 @@ test("fetch", function() {
     // equal(result.records[0].id, 0);
     // equal(result.records[0].country, 'DE');
   });
-  $.ajax.restore();
+
+  teardown();
+});
+
+test("search", function() { 
+  setup();
+
+  recline.Backend.Ckan.query({}, datasetFixture).done(function(result) {
+    deepEqual(
+      _.pluck(result.fields, 'id'),
+      _.pluck(sample_data.result.fields, 'id')
+    );
+    // check we've mapped types correctly
+    equal(result.fields[3].id, 'x');
+    equal(result.fields[3].type, 'integer');
+    equal(result.fields[6].id, 'country');
+    equal(result.fields[6].type, 'text');
+
+    // (not true atm) fetch does a query so we can check for records
+    // equal(result.records.length, 6);
+    // equal(result.records[0].id, 0);
+    // equal(result.records[0].country, 'DE');
+  });
+
+  teardown();
 });
 
 var sample_data = {
