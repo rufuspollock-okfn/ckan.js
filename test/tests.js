@@ -1,5 +1,6 @@
 (function ($) {
-module("Backend CKAN");
+
+module("Utilities");
 
 test('_parseCkanResourceUrl', function() {
   var resid = 'eb23e809-ccbb-4ad1-820a-19586fc4bebd';
@@ -11,6 +12,8 @@ test('_parseCkanResourceUrl', function() {
   }
   deepEqual(out, exp);
 });
+
+module("CKAN - DataStore");
 
 test('_normalizeQuery', function() {
   var dataset = {
@@ -38,26 +41,26 @@ test('_normalizeQuery', function() {
   deepEqual(out, exp);
 });
 
+module("Catalog");
 
-function setup() {
-  var stub = sinon.stub($, 'ajax', function(options) {
-    if (options.url.indexOf('datastore_search') != -1) {
-      options.success(sample_data);
-    }
+test('dataset_create', function() {
+  setup();
+  var apiKey = 'xyz';
+  var catalog = new CKAN.Catalog('', apiKey); 
+  var data = {};
+  catalog.action('dataset_create', data, function(err, out) {
+    equal(out.status, 'ok');
+    teardown();
   });
-}
+});
 
-function teardown() {
-  $.ajax.restore();
-}
+// ====================================================
 
-var datasetFixture = {
-  url: 'http://localhost:5000/dataset/test-data-viewer/resource/4f1299ab-a100-4e5f-ba81-e6d234a2f3bd',
-  backend: 'ckan'
-};
+module("CKAN - Recline");
 
 test("fetch", function() { 
   setup();
+  var sample_data = apiData.datastore_search;
 
   recline.Backend.Ckan.fetch(datasetFixture).done(function(result) {
     deepEqual(
@@ -81,6 +84,7 @@ test("fetch", function() {
 
 test("search", function() { 
   setup();
+  var sample_data = apiData.datastore_search;
 
   recline.Backend.Ckan.query({}, datasetFixture).done(function(result) {
     deepEqual(
@@ -102,7 +106,27 @@ test("search", function() {
   teardown();
 });
 
-var sample_data = {
+function setup() {
+  var stub = sinon.stub($, 'ajax', function(options) {
+    for (key in apiData) {
+      if (options.url.indexOf(key) != -1) {
+        options.success(apiData[key]);
+      }
+    }
+  });
+}
+
+function teardown() {
+  $.ajax.restore();
+}
+
+var datasetFixture = {
+  url: 'http://localhost:5000/dataset/test-data-viewer/resource/4f1299ab-a100-4e5f-ba81-e6d234a2f3bd',
+  backend: 'ckan'
+};
+
+var apiData = {}
+apiData.datastore_search = {
   "help": "",
   "result": {
     "fields": [
@@ -226,5 +250,9 @@ var sample_data = {
   }, 
   "success": true
 };
+
+apiData.package_create = {
+  status: 'ok'
+}
 
 })(this.jQuery);

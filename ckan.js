@@ -1,37 +1,24 @@
 var CKAN = {};
 
-(function(my) {
-  // ## CKAN Backend
-  //
-  // This provides connection to the CKAN DataStore (v2)
-  //
-  // General notes
-  // 
-  // We need 2 things to make most requests:
-  //
-  // 1. CKAN API endpoint
-  // 2. ID of resource for which request is being made
-  //
-  // There are 2 ways to specify this information.
-  //
-  // EITHER (checked in order): 
-  //
-  // * Every dataset must have an id equal to its resource id on the CKAN instance
-  // * The dataset has an endpoint attribute pointing to the CKAN API endpoint
-  //
-  // OR:
-  // 
-  // Set the url attribute of the dataset to point to the Resource on the CKAN instance. The endpoint and id will then be automatically computed.
+var isNodeModule = (typeof module !== 'undefined' && module != null && typeof require !== 'undefined');
 
+if (isNodeModule) {
+  var _ = require('underscore')
+    , request = require('request')
+    ;
+  module.exports = CKAN;
+}
+
+(function(my) {
+  // ====================================
   // ### DataStore
   //
   // Simple wrapper around the CKAN DataStore API
   //
   // @param endpoint: CKAN api endpoint (e.g. http://datahub.io/api)
-  my.DataStore = function(endpoint) { 
-    this.endpoint = endpoint || my.API_ENDPOINT;
-    this.endpoint = this.endpoint.replace(/\/$/, '');
-    // TODO: ? add /api if not present
+  my.DataStore = function(endpoint, apiKey) { 
+    this.endpoint = _getEndpoint(endpoint);
+    this.apiKey = apiKey;
   };
 
   // Raw action search function
@@ -39,15 +26,12 @@ var CKAN = {};
   // search({resource_id: ..., limit: 0})
   my.DataStore.prototype.search = function(data, cb) {
     var searchUrl = this.endpoint + '/3/action/datastore_search';
-    var jqxhr = jQuery.ajax({
+    var options = {
       url: searchUrl,
       type: 'POST',
       data: JSON.stringify(data),
-      success: function(data) {
-        cb(null, data)
-      },
-      error: cb
-    });
+    };
+    this._ajax(options, cb);
   };
 
   my.DataStore.prototype.query = function(queryObj, cb) {
@@ -61,24 +45,106 @@ var CKAN = {};
     });
   };
 
+  my.DataStore.prototype.upsert = function(upsertObj, cb) {
+    var url = this.endpoint + '/api/3/datastore_upsert';
+    return this._ajax({
+        url: url,
+        type: 'POST',
+        data: JSON.stringify(upsertObj)
+      },
+      cb
+    );
+  };
+
   my.DataStore.prototype.listResources = function(cb) {
     var resourceListUrl = this.endpoint + '/3/action/datastore_search?resource_id=_table_metadata';
-    _get({url: resourceListUrl}, cb);
+    return this._ajax({url: resourceListUrl}, cb);
   }
 
-  var _get = function(options, cb) {
+
+  my.Catalog = function(endpoint, apiKey) { 
+    this.endpoint = _getEndpoint(endpoint);
+    this.apiKey = apiKey;
+  };
+
+  my.Catalog.prototype.action = function(name, data, cb) {
+    if (name === 'dataset_create') {
+      name = 'package_create';
+    }
+    var options = {
+      url: this.endpoint + '/3/action/' + name,
+      data: data,
+      type: 'POST'
+    };
+    return this._ajax(options, cb);
+  };
+
+  // Utilities
+  // =========
+
+  var _getEndpoint = function(endpoint) {
+    endpoint = endpoint || '/';
+    // strip trailing /
+    endpoint = endpoint.replace(/\/$/, '');
+    if (!endpoint.match(/\/api$/)) {
+      endpoint += '/api';
+    }
+    return endpoint;
+  };
+
+  // make an AJAX request
+  my.Catalog.prototype._ajax = function(options, cb) {
+    options.headers = options.headers || {};
+    if (this.apiKey) {
+      options.headers['X-CKAN-API-KEY'] = this.apiKey;
+    }
+    var meth = isNodeModule ? _nodeRequest : _browserRequest;
+    return meth(options, cb);
+  }
+
+  my.DataStore.prototype._ajax = function(options, cb) {
+    options.headers = options.headers || {};
+    if (this.apiKey) {
+      options.headers['X-CKAN-API-KEY'] = this.apiKey;
+    }
+    var meth = isNodeModule ? _nodeRequest : _browserRequest;
+    return meth(options, cb);
+  }
+
+  var _nodeRequest = function(options, cb) {
+    var conf = {
+      url: options.url,
+      headers: options.headers || {},
+      method: options.type || 'GET',
+      json: options.data
+    };
+    request(conf, function(err, res, body) {
+      cb(err, body);
+    });
+  };
+
+  var _browserRequest = function(options, cb) {
+    var self = this;
+    options.data = JSON.stringify(options.data);
     options.success = function(data) {
       cb(null, data);
     }
     options.error = function(obj, obj2, obj3) {
       var err = {
-        code: obj.statusCode,
-        message: obj2
+        code: obj.status,
+        message: obj.responseText
       }
       cb(err); 
     }
-    var jqxhr = jQuery.ajax(options);
-  }
+    if (options.headers) {
+      options.beforeSend = function(req) {
+        for (key in options.headers) {
+          req.setRequestHeader(key, options.headers[key]);
+        }
+      };
+    }
+    return jQuery.ajax(options);
+  };
 
   // only put in the module namespace so we can access for tests!
   my._normalizeQuery = function(queryObj, dataset) {
@@ -124,6 +190,26 @@ var CKAN = {};
 // Recline Wrapper
 //
 // Wrap the DataStore to create a Backend suitable for usage in ReclineJS
+//
+// This provides connection to the CKAN DataStore (v2)
+//
+// General notes
+// 
+// We need 2 things to make most requests:
+//
+// 1. CKAN API endpoint
+// 2. ID of resource for which request is being made
+//
+// There are 2 ways to specify this information.
+//
+// EITHER (checked in order): 
+//
+// * Every dataset must have an id equal to its resource id on the CKAN instance
+// * The dataset has an endpoint attribute pointing to the CKAN API endpoint
+//
+// OR:
+// 
+// Set the url attribute of the dataset to point to the Resource on the CKAN instance. The endpoint and id will then be automatically computed.
 var recline = recline || {};
 recline.Backend = recline.Backend || {};
 recline.Backend.Ckan = recline.Backend.Ckan || {};
@@ -132,11 +218,6 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
 
   // private - use either jQuery or Underscore Deferred depending on what is available
   var Deferred = _.isUndefined(this.jQuery) ? _.Deferred : jQuery.Deferred;
-
-  // Default CKAN API endpoint used for requests (you can change this but it will affect every request!)
-  //
-  // DEPRECATION: this will be removed in v0.7. Please set endpoint attribute on dataset instead
-  my.API_ENDPOINT = 'http://datahub.io/api';
 
   // ### fetch
   my.fetch = function(dataset) {
