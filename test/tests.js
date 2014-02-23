@@ -4,7 +4,7 @@ module("Backend CKAN");
 test('_parseCkanResourceUrl', function() {
   var resid = 'eb23e809-ccbb-4ad1-820a-19586fc4bebd';
   var url = 'http://demo.ckan.org/dataset/some-dataset/resource/' + resid;
-  var out = recline.Backend.Ckan._parseCkanResourceUrl(url);
+  var out = CKAN._parseCkanResourceUrl(url);
   var exp = {
     resource_id: resid,
     endpoint: 'http://demo.ckan.org/api'
@@ -26,7 +26,7 @@ test('_normalizeQuery', function() {
       { field: 'last' }
     ]
   };
-  var out = recline.Backend.Ckan._normalizeQuery(queryObj, dataset);
+  var out = CKAN._normalizeQuery(queryObj, dataset);
   var exp = {
     resource_id: dataset.id,
     q: 'abc',
