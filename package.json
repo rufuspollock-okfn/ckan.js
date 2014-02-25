@@ -1,0 +1,16 @@
+{
+    "name": "ckan"
+  , "version": "0.1.0"
+  , "author": "Open Knowledge Foundation <labs@okfn.org>"
+  , "repository": {
+    "type": "git",
+    "url": "https://github.com/okfn/ckan.js"
+  }
+  , "license": "MIT"
+  , "dependencies": {
+      "request": ""
+    , "underscore": ""
+  }
+  , "devDependencies": {
+  }
+}
