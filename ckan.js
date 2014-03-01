@@ -22,8 +22,8 @@ if (isNodeModule) {
   };
 
   my.Client.prototype.action = function(name, data, cb) {
-    if (name === 'dataset_create') {
-      name = 'package_create';
+    if (name.indexOf('dataset_' === 0)) {
+      name = name.replace('dataset_', 'package_');
     }
     var options = {
       url: this.endpoint + '/3/action/' + name,
@@ -62,14 +62,26 @@ if (isNodeModule) {
 
   // Like search but supports ReclineJS style query structure
   my.DataStore.prototype.query = function(queryObj, cb) {
-    var actualQuery = my._normalizeQuery(queryObj, dataset);
+    var actualQuery = my._normalizeQuery(queryObj);
     this.search(actualQuery, function(err, results) {
+      // map ckan types to our usual types ...
+      var fields = _.map(results.result.fields, function(field) {
+        field.type = field.type in CKAN_TYPES_MAP ? CKAN_TYPES_MAP[field.type] : field.type;
+        return field;
+      });
       var out = {
         total: results.result.total,
+        fields: fields,
         hits: results.result.records
       };
       cb(null, out);
     });
+  };
+
+  var CKAN_TYPES_MAP = {
+    'int4': 'integer',
+    'int8': 'integer',
+    'float8': 'float'
   };
 
   my.DataStore.prototype.create = function(data, cb) {
@@ -84,7 +96,7 @@ if (isNodeModule) {
     var data = {
       resource_id: '_table_metadata'
     };
-    return this._client.actin('datastore_search', data, cb);
+    return this._client.action('datastore_search', data, cb);
   };
 
   // Utilities
@@ -136,9 +148,9 @@ if (isNodeModule) {
   };
 
   // only put in the module namespace so we can access for tests!
-  my._normalizeQuery = function(queryObj, dataset) {
+  my._normalizeQuery = function(queryObj) {
     var actualQuery = {
-      resource_id: dataset.id,
+      resource_id: queryObj.resource_id,
       q: queryObj.q,
       filters: {},
       limit: queryObj.size || 10,
@@ -210,16 +222,19 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
 
   // ### fetch
   my.fetch = function(dataset) {
-    var wrapper;
-    if (dataset.endpoint) {
-      wrapper = new my.DataStore(dataset.endpoint);
-    } else {
-      var out = CKAN._parseCkanResourceUrl(dataset.url);
-      dataset.id = out.resource_id;
-      wrapper = new CKAN.DataStore(out.endpoint);
-    }
-    var dfd = new Deferred();
-    return my.query({resource_id: dataset.id, limit: 0}, dataset);
+    var dfd = new Deferred()
+    my.query({}, dataset)
+      .done(function(data) {
+        dfd.resolve({
+          fields: data.fields,
+          records: data.hits
+        });
+      })
+      .fail(function(err) {
+        dfd.reject(err);
+      })
+      ;
+    return dfd.promise();
   };
 
   my.query = function(queryObj, dataset) {
@@ -233,25 +248,15 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
       dataset.id = out.resource_id;
       wrapper = new CKAN.DataStore(out.endpoint);
     }
-    wrapper.search(queryObj, function(err, results) {
-      // map ckan types to our usual types ...
-      var fields = _.map(results.result.fields, function(field) {
-        field.type = field.type in CKAN_TYPES_MAP ? CKAN_TYPES_MAP[field.type] : field.type;
-        return field;
-      });
-      var out = {
-        fields: fields,
-        useMemoryStore: false
-      };
-      dfd.resolve(out);  
+    queryObj.resource_id = dataset.id;
+    wrapper.query(queryObj, function(err, out) {
+      if (err) {
+        dfd.reject(err);
+      } else {
+        dfd.resolve(out);
+      }
     });
     return dfd.promise();
-  };
-
-  var CKAN_TYPES_MAP = {
-    'int4': 'integer',
-    'int8': 'integer',
-    'float8': 'float'
   };
 }(recline.Backend.Ckan));
 

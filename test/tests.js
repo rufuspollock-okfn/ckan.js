@@ -16,22 +16,17 @@ test('_parseCkanResourceUrl', function() {
 module("CKAN - DataStore");
 
 test('_normalizeQuery', function() {
-  var dataset = {
-    url: 'does-not-matter',
-    id: 'xyz',
-    backend: 'ckan'
-  };
-
   var queryObj = {
+    resource_id: 'xyz',
     q: 'abc',
     sort: [
       { field: 'location', order: 'desc' },
       { field: 'last' }
     ]
   };
-  var out = CKAN._normalizeQuery(queryObj, dataset);
+  var out = CKAN._normalizeQuery(queryObj);
   var exp = {
-    resource_id: dataset.id,
+    resource_id: queryObj.resource_id,
     q: 'abc',
     filters: {},
     sort: 'location desc,last ',
@@ -77,13 +72,13 @@ test("fetch", function() {
     equal(result.fields[6].type, 'text');
 
     // (not true atm) fetch does a query so we can check for records
-    // equal(result.records.length, 6);
-    // equal(result.records[0].id, 0);
-    // equal(result.records[0].country, 'DE');
+    equal(result.records.length, 6);
+    equal(result.records[0].id, 0);
+    equal(result.records[0].country, 'DE');
   });
 });
 
-test("search", function() { 
+test("query", function() { 
   var sample_data = apiData.datastore_search;
 
   recline.Backend.Ckan.query({}, datasetFixture).done(function(result) {
@@ -98,9 +93,9 @@ test("search", function() {
     equal(result.fields[6].type, 'text');
 
     // (not true atm) fetch does a query so we can check for records
-    // equal(result.records.length, 6);
-    // equal(result.records[0].id, 0);
-    // equal(result.records[0].country, 'DE');
+    equal(result.total, 6);
+    equal(result.hits[0].id, 0);
+    equal(result.hits[0].country, 'DE');
   });
 });
 
