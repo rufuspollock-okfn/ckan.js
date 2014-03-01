@@ -16,24 +16,51 @@ if (isNodeModule) {
   // Simple wrapper around the CKAN DataStore API
   //
   // @param endpoint: CKAN api endpoint (e.g. http://datahub.io/api)
-  my.DataStore = function(endpoint, apiKey) { 
+  my.Client = function(endpoint, apiKey) { 
     this.endpoint = _getEndpoint(endpoint);
     this.apiKey = apiKey;
+  };
+
+  my.Client.prototype.action = function(name, data, cb) {
+    if (name === 'dataset_create') {
+      name = 'package_create';
+    }
+    var options = {
+      url: this.endpoint + '/3/action/' + name,
+      data: data,
+      type: 'POST'
+    };
+    return this._ajax(options, cb);
+  };
+
+  // make an AJAX request
+  my.Client.prototype._ajax = function(options, cb) {
+    options.headers = options.headers || {};
+    if (this.apiKey) {
+      options.headers['X-CKAN-API-KEY'] = this.apiKey;
+    }
+    var meth = isNodeModule ? _nodeRequest : _browserRequest;
+    return meth(options, cb);
+  }
+
+  // ====================================
+  // ### DataStore
+  //
+  // Simple wrapper around the CKAN DataStore API
+  //
+  // @param endpoint: CKAN api endpoint (e.g. http://datahub.io/api)
+  my.DataStore = function(endpoint, apiKey) { 
+    this._client = new my.Client(endpoint, apiKey);
   };
 
   // Raw action search function
   //
   // search({resource_id: ..., limit: 0})
   my.DataStore.prototype.search = function(data, cb) {
-    var searchUrl = this.endpoint + '/3/action/datastore_search';
-    var options = {
-      url: searchUrl,
-      type: 'POST',
-      data: JSON.stringify(data),
-    };
-    this._ajax(options, cb);
+    return this._client.action('datastore_search', data, cb);
   };
 
+  // Like search but supports ReclineJS style query structure
   my.DataStore.prototype.query = function(queryObj, cb) {
     var actualQuery = my._normalizeQuery(queryObj, dataset);
     this.search(actualQuery, function(err, results) {
@@ -45,38 +72,19 @@ if (isNodeModule) {
     });
   };
 
-  my.DataStore.prototype.upsert = function(upsertObj, cb) {
-    var url = this.endpoint + '/api/3/datastore_upsert';
-    return this._ajax({
-        url: url,
-        type: 'POST',
-        data: JSON.stringify(upsertObj)
-      },
-      cb
-    );
+  my.DataStore.prototype.create = function(data, cb) {
+    return this._client.action('datastore_create', data, cb);
+  };
+
+  my.DataStore.prototype.upsert = function(data, cb) {
+    return this._client.action('datastore_upsert', data, cb);
   };
 
   my.DataStore.prototype.listResources = function(cb) {
-    var resourceListUrl = this.endpoint + '/3/action/datastore_search?resource_id=_table_metadata';
-    return this._ajax({url: resourceListUrl}, cb);
-  }
-
-
-  my.Catalog = function(endpoint, apiKey) { 
-    this.endpoint = _getEndpoint(endpoint);
-    this.apiKey = apiKey;
-  };
-
-  my.Catalog.prototype.action = function(name, data, cb) {
-    if (name === 'dataset_create') {
-      name = 'package_create';
-    }
-    var options = {
-      url: this.endpoint + '/3/action/' + name,
-      data: data,
-      type: 'POST'
+    var data = {
+      resource_id: '_table_metadata'
     };
-    return this._ajax(options, cb);
+    return this._client.actin('datastore_search', data, cb);
   };
 
   // Utilities
@@ -91,25 +99,6 @@ if (isNodeModule) {
     }
     return endpoint;
   };
-
-  // make an AJAX request
-  my.Catalog.prototype._ajax = function(options, cb) {
-    options.headers = options.headers || {};
-    if (this.apiKey) {
-      options.headers['X-CKAN-API-KEY'] = this.apiKey;
-    }
-    var meth = isNodeModule ? _nodeRequest : _browserRequest;
-    return meth(options, cb);
-  }
-
-  my.DataStore.prototype._ajax = function(options, cb) {
-    options.headers = options.headers || {};
-    if (this.apiKey) {
-      options.headers['X-CKAN-API-KEY'] = this.apiKey;
-    }
-    var meth = isNodeModule ? _nodeRequest : _browserRequest;
-    return meth(options, cb);
-  }
 
   var _nodeRequest = function(options, cb) {
     var conf = {

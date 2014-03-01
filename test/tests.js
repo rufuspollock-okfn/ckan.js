@@ -41,25 +41,28 @@ test('_normalizeQuery', function() {
   deepEqual(out, exp);
 });
 
-module("Catalog");
+module("Client", {
+  setup: setup,
+  teardown: teardown
+});
 
 test('dataset_create', function() {
-  setup();
   var apiKey = 'xyz';
-  var catalog = new CKAN.Catalog('', apiKey); 
+  var catalog = new CKAN.Client('', apiKey); 
   var data = {};
   catalog.action('dataset_create', data, function(err, out) {
     equal(out.status, 'ok');
-    teardown();
   });
 });
 
 // ====================================================
 
-module("CKAN - Recline");
+module("CKAN - Recline", {
+  setup: setup,
+  teardown: teardown
+});
 
 test("fetch", function() { 
-  setup();
   var sample_data = apiData.datastore_search;
 
   recline.Backend.Ckan.fetch(datasetFixture).done(function(result) {
@@ -78,12 +81,9 @@ test("fetch", function() {
     // equal(result.records[0].id, 0);
     // equal(result.records[0].country, 'DE');
   });
-
-  teardown();
 });
 
 test("search", function() { 
-  setup();
   var sample_data = apiData.datastore_search;
 
   recline.Backend.Ckan.query({}, datasetFixture).done(function(result) {
@@ -102,8 +102,6 @@ test("search", function() {
     // equal(result.records[0].id, 0);
     // equal(result.records[0].country, 'DE');
   });
-
-  teardown();
 });
 
 function setup() {

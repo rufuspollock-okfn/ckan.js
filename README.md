@@ -53,23 +53,34 @@ Callback structure follows Node conventions, that is:
 Set it up:
 
 ```
-var catalog = new CKAN.Catalog('http://my-ckan-site.com');
+var client = new CKAN.Client('http://my-ckan-site.com');
 
 // You can also provide an API key (for operations that require one)
-var catalog = new CKAN.Catalog('http://my-ckan-site.com', 'my-api-key');
+var client = new CKAN.Client('http://my-ckan-site.com', 'my-api-key');
 ```
 
-Use the [action API][]
+You can now use any part of the [action API][]:
 
-[action API]: ...
+[action API]: http://docs.ckan.org/en/latest/api/index.html
 
 ```
-catalog.action('dataset_create', { name: 'my-dataset' }, callback)
+catalog.action('action_name', data, callback)
 ```
+
+For example, to create a dataset using `dataset_create` action you would do:
+
+```
+catalog.action('dataset_create', { name: 'my-dataset' }, function(err, result) {
+  console.log(err);
+  console.log(result);
+})
+```
+
 ### DataStore
 
-Set it up:
+We provide a wrapper around the standard client designed specifically to support DataStore operations.
 
+Set it up:
 
 ```
 // as for Catalog you can provide an API key if needed
@@ -79,6 +90,8 @@ var datastore = new CKAN.DataStore('http://my-ckan-site.com');
 Search a Dataset Resource (see `datastore_search` for details of options)
 
 ```
-datastore.search({resource_id: '...', q: '...'});
+datastore.search({resource_id: '...', q: '...'}, function(err, out) {
+  console.log(err, out);
+});
 ```
 
