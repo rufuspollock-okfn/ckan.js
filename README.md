@@ -64,13 +64,13 @@ You can now use any part of the [action API][]:
 [action API]: http://docs.ckan.org/en/latest/api/index.html
 
 ```
-catalog.action('action_name', data, callback)
+client.action('action_name', data, callback)
 ```
 
 For example, to create a dataset using `dataset_create` action you would do:
 
 ```
-catalog.action('dataset_create', { name: 'my-dataset' }, function(err, result) {
+client.action('dataset_create', { name: 'my-dataset' }, function(err, result) {
   console.log(err);
   console.log(result);
 })
@@ -78,20 +78,22 @@ catalog.action('dataset_create', { name: 'my-dataset' }, function(err, result) {
 
 ### DataStore
 
-We provide a wrapper around the standard client designed specifically to support DataStore operations.
-
-Set it up:
-
-```
-// as for Catalog you can provide an API key if needed
-var datastore = new CKAN.DataStore('http://my-ckan-site.com');
-```
+The DataStore is also supported via the action API so use is also via the standard Client.
 
 Search a Dataset Resource (see `datastore_search` for details of options)
 
 ```
-datastore.search({resource_id: '...', q: '...'}, function(err, out) {
+client.action('dataset_search', {resource_id: '...', q: '...'}, function(err, out) {
   console.log(err, out);
 });
 ```
+
+### Recline JS Backend
+
+This module also provides a Recline compatible backend available as:
+
+`recline.backend.Ckan`
+
+The backend supports `fetch` and `query` but no write APIs at the present time.
+
 

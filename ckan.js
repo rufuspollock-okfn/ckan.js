@@ -10,12 +10,6 @@ if (isNodeModule) {
 }
 
 (function(my) {
-  // ====================================
-  // ### DataStore
-  //
-  // Simple wrapper around the CKAN DataStore API
-  //
-  // @param endpoint: CKAN api endpoint (e.g. http://datahub.io/api)
   my.Client = function(endpoint, apiKey) { 
     this.endpoint = _getEndpoint(endpoint);
     this.apiKey = apiKey;
@@ -43,27 +37,12 @@ if (isNodeModule) {
     return meth(options, cb);
   }
 
-  // ====================================
-  // ### DataStore
-  //
-  // Simple wrapper around the CKAN DataStore API
-  //
-  // @param endpoint: CKAN api endpoint (e.g. http://datahub.io/api)
-  my.DataStore = function(endpoint, apiKey) { 
-    this._client = new my.Client(endpoint, apiKey);
-  };
-
-  // Raw action search function
-  //
-  // search({resource_id: ..., limit: 0})
-  my.DataStore.prototype.search = function(data, cb) {
-    return this._client.action('datastore_search', data, cb);
-  };
-
   // Like search but supports ReclineJS style query structure
-  my.DataStore.prototype.query = function(queryObj, cb) {
+  //
+  // Primarily for use by Recline backend below
+  my.Client.prototype.datastoreQuery = function(queryObj, cb) {
     var actualQuery = my._normalizeQuery(queryObj);
-    this.search(actualQuery, function(err, results) {
+    this.action('datastore_search', actualQuery, function(err, results) {
       // map ckan types to our usual types ...
       var fields = _.map(results.result.fields, function(field) {
         field.type = field.type in CKAN_TYPES_MAP ? CKAN_TYPES_MAP[field.type] : field.type;
@@ -84,15 +63,8 @@ if (isNodeModule) {
     'float8': 'float'
   };
 
-  my.DataStore.prototype.create = function(data, cb) {
-    return this._client.action('datastore_create', data, cb);
-  };
-
-  my.DataStore.prototype.upsert = function(data, cb) {
-    return this._client.action('datastore_upsert', data, cb);
-  };
-
-  my.DataStore.prototype.listResources = function(cb) {
+  // list all the resources with an entry in the DataStore
+  my.Client.prototype.datastoreResources = function(cb) {
     var data = {
       resource_id: '_table_metadata'
     };
@@ -246,10 +218,10 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
     } else {
       var out = CKAN._parseCkanResourceUrl(dataset.url);
       dataset.id = out.resource_id;
-      wrapper = new CKAN.DataStore(out.endpoint);
+      wrapper = new CKAN.Client(out.endpoint);
     }
     queryObj.resource_id = dataset.id;
-    wrapper.query(queryObj, function(err, out) {
+    wrapper.datastoreQuery(queryObj, function(err, out) {
       if (err) {
         dfd.reject(err);
       } else {
