@@ -36,7 +36,7 @@ test('_normalizeQuery', function() {
   deepEqual(out, exp);
 });
 
-module("Client", {
+module("Catalog", {
   setup: setup,
   teardown: teardown
 });
@@ -69,7 +69,7 @@ test("fetch", function() {
     equal(result.fields[3].id, 'x');
     equal(result.fields[3].type, 'integer');
     equal(result.fields[6].id, 'country');
-    equal(result.fields[6].type, 'text');
+    equal(result.fields[6].type, 'string');
 
     // (not true atm) fetch does a query so we can check for records
     equal(result.records.length, 6);
@@ -90,7 +90,7 @@ test("query", function() {
     equal(result.fields[3].id, 'x');
     equal(result.fields[3].type, 'integer');
     equal(result.fields[6].id, 'country');
-    equal(result.fields[6].type, 'text');
+    equal(result.fields[6].type, 'string');
 
     // (not true atm) fetch does a query so we can check for records
     equal(result.total, 6);

@@ -45,7 +45,7 @@ if (isNodeModule) {
     this.action('datastore_search', actualQuery, function(err, results) {
       // map ckan types to our usual types ...
       var fields = _.map(results.result.fields, function(field) {
-        field.type = field.type in CKAN_TYPES_MAP ? CKAN_TYPES_MAP[field.type] : field.type;
+        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
         return field;
       });
       var out = {
@@ -57,10 +57,27 @@ if (isNodeModule) {
     });
   };
 
-  var CKAN_TYPES_MAP = {
+  my.ckan2JsonTableSchemaTypes = {
+    'text': 'string',
+    'int': 'integer',
     'int4': 'integer',
     'int8': 'integer',
-    'float8': 'float'
+    'float8': 'float',
+    'timestamp': 'datetime',
+    'bool': 'boolean',
+  };
+
+  // 
+  my.jsonTableSchema2CkanTypes = {
+    'string': 'text',
+    'number': 'float',
+    'integer': 'int',
+    'datetime': 'timestamp',
+    'boolean': 'bool',
+    'binary': 'bytea',
+    'object': 'json',
+    'array': 'text[]',
+    'any': 'text'
   };
 
   // list all the resources with an entry in the DataStore
@@ -91,7 +108,11 @@ if (isNodeModule) {
       method: options.type || 'GET',
       json: options.data
     };
-    request(conf, function(err, res, body) {
+    // we could just call request but that's a PITA to mock plus request.get = request (if you look at the source code)
+    request.get(conf, function(err, res, body) {
+      if (!err && res && !(res.statusCode === 200 || res.statusCode === 302)) {
+        err = 'Bad HTTP code ' + res.statusCode;
+      }
       cb(err, body);
     });
   };
