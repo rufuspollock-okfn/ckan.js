@@ -105,14 +105,18 @@ the CKAN client. Here are a few examples:
 
 [datastore]: http://docs.ckan.org/en/latest/maintaining/datastore.html
 
-Store data into the Data API:
+#### Store Data
+
+Store data into the DataStore:
 
 ```
+// 2 rows or data (with columns/fields named 'A' and 'B'
 var records = [
   { A: 1, B: 2 },
   { A: 10, B: 16}
 ];
-// the id of a CKAN DataSet resource (the data here is considered to be that resource's data)
+// the id of a CKAN DataSet resource (the data that we store will be associated with that resource)
+// this resource will need to already exist
 resourceId = 'abc-efg';
 client.action('datastore_create', {
     resource_id: resourceId,
@@ -123,7 +127,7 @@ client.action('datastore_create', {
   })
 ```
 
-Here's an example of loading data from a CSV file:
+Here's an example of loading data from a CSV file into the DataStore:
 
 ```
 // npm's csv file
@@ -142,7 +146,12 @@ csv()
     ;
 ```
 
-Search data using the Data API - see `datastore_search` for details of options:
+#### Search Data
+
+Search data using the Data API - see [`datastore_search`][ds-search] for
+details of options:
+
+[ds-search]: http://docs.ckan.org/en/latest/maintaining/datastore.html#ckanext.datastore.logic.action.datastore_search
 
 ```
 client.action('dataset_search', {
@@ -162,6 +171,6 @@ This module also provides a Recline compatible backend available as:
 
 `recline.backend.Ckan`
 
-The backend supports `fetch` and `query` but no write APIs at the present time.
-
+The backend supports `fetch` and `query` but does not provide write support at
+the present time.
 
