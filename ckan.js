@@ -235,7 +235,7 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
       , wrapper
       ;
     if (dataset.endpoint) {
-      wrapper = new CKAN.DataStore(dataset.endpoint);
+      wrapper = new CKAN.Client(dataset.endpoint);
     } else {
       var out = CKAN._parseCkanResourceUrl(dataset.url);
       dataset.id = out.resource_id;
