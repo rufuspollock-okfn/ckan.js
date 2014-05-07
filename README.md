@@ -107,11 +107,11 @@ the CKAN client. Here are a few examples:
 
 #### Store Data
 
-Store data into the DataStore:
+Store data into the DataStore for an existing resource
 
 ```
 // 2 rows or data (with columns/fields named 'A' and 'B'
-var records = [
+var data = [
   { A: 1, B: 2 },
   { A: 10, B: 16}
 ];
@@ -123,6 +123,22 @@ client.action('datastore_create', {
     records: data
   },
   function(err) {
+    if (err) console.log(err);
+    console.log('All done');
+  })
+```
+
+Store data into a new DataStore resource:
+
+```
+// the id of a CKAN dataset that already exists
+packageId = 'the-best-dataset-ever';
+client.action('datastore_create', {
+    resource: {package_id: packageId},
+    records: data
+  },
+  function(err) {
+    if (err) console.log(err);
     console.log('All done');
   })
 ```
@@ -140,6 +156,7 @@ csv()
         records: data
       },
       function(err) {
+        if (err) console.log(err);
         console.log('All done');
       })
     })
