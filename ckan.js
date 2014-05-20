@@ -43,6 +43,11 @@ if (isNodeModule) {
   my.Client.prototype.datastoreQuery = function(queryObj, cb) {
     var actualQuery = my._normalizeQuery(queryObj);
     this.action('datastore_search', actualQuery, function(err, results) {
+      if (err) {
+        cb(err);
+        return;
+      }
+
       // map ckan types to our usual types ...
       var fields = _.map(results.result.fields, function(field) {
         field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
@@ -50,6 +55,33 @@ if (isNodeModule) {
       });
       var out = {
         total: results.result.total,
+        fields: fields,
+        hits: results.result.records
+      };
+      cb(null, out);
+    });
+  };
+
+  my.Client.prototype.datastoreSqlQuery = function(sql, cb) {
+    this.action('datastore_search_sql', {sql: sql}, function(err, results) {
+      if (err) {
+        var parsed = JSON.parse(err.message);
+        var errOut = {
+          original: err,
+          code: err.code,
+          message: parsed.error.info.orig[0]
+        };
+        cb(errOut);
+        return;
+      }
+
+      // map ckan types to our usual types ...
+      var fields = _.map(results.result.fields, function(field) {
+        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
+        return field;
+      });
+      var out = {
+        total: results.result.length,
         fields: fields,
         hits: results.result.records
       };

@@ -182,6 +182,47 @@ client.action('dataset_search', {
 });
 ```
 
+Or using SQL support:
+
+```
+client.action('dataset_search_sql', {
+    sql: '...'
+  },
+  function(err, out) {
+    if (err) console.log(err);
+    console.log(out);
+  })
+});
+```
+
+There are also a couple of nice wrapper methods:
+
+```
+// queryObj should be like the Recline Query structure
+// http://okfnlabs.org/recline/docs/models.html#query
+client.datastoreQuery(queryObj, function(err, out) {
+  // out will follow recline structure, viz
+  {
+    total: ..
+    fields: ... (fields will have Recline / JSON Table Schema types)
+    hits: array of results ...
+  }
+});
+```
+
+And for SQL
+
+```
+client.datastoreQuery(sql, function(err, out) {
+  // out will follow recline structure, viz
+  {
+    total: ..
+    fields: ... (fields will have Recline / JSON Table Schema types)
+    hits: array of results ...
+  }
+});
+```
+
 ### Recline JS Backend
 
 This module also provides a Recline compatible backend available as:
