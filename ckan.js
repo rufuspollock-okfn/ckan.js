@@ -170,7 +170,9 @@ if (isNodeModule) {
   // Parse a normal CKAN resource URL and return API endpoint etc
   //
   // Normal URL is something like http://demo.ckan.org/dataset/some-dataset/resource/eb23e809-ccbb-4ad1-820a-19586fc4bebd
-  my._parseCkanResourceUrl = function(url) {
+  //
+  // :return: { resource_id: ..., endpoint: ... }
+  my.parseCkanResourceUrl = function(url) {
     parts = url.split('/');
     var len = parts.length;
     return {
@@ -237,7 +239,7 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
     if (dataset.endpoint) {
       wrapper = new CKAN.DataStore(dataset.endpoint);
     } else {
-      var out = CKAN._parseCkanResourceUrl(dataset.url);
+      var out = CKAN.parseCkanResourceUrl(dataset.url);
       dataset.id = out.resource_id;
       wrapper = new CKAN.Client(out.endpoint);
     }
