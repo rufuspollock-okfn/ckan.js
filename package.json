@@ -10,7 +10,7 @@
   , "license": "MIT"
   , "dependencies": {
       "request": ""
-    , "underscore": ""
+    , "lodash": ""
   }
   , "devDependencies": {
   }
