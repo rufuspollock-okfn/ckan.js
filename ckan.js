@@ -143,7 +143,7 @@ if (isNodeModule) {
     // we could just call request but that's a PITA to mock plus request.get = request (if you look at the source code)
     request.get(conf, function(err, res, body) {
       if (!err && res && !(res.statusCode === 200 || res.statusCode === 302)) {
-        err = 'CKANJS API Error. HTTP code ' + res.statusCode + '. Message: ' + body;
+        err = 'CKANJS API Error. HTTP code ' + res.statusCode + '. Message: ' + JSON.stringify(body, null, 2);
       }
       cb(err, body);
     });
