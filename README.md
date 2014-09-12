@@ -213,7 +213,7 @@ client.datastoreQuery(queryObj, function(err, out) {
 And for SQL
 
 ```
-client.datastoreQuery(sql, function(err, out) {
+client.datastoreSqlQuery(sql, function(err, out) {
   // out will follow recline structure, viz
   {
     total: ..
