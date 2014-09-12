@@ -7,7 +7,7 @@ DataStore API][ckan-api].
 It also provides a [Recline compatible backend][recline-backend].
 
 [CKAN]: http://ckan.org/
-[ckan-api]: http://docs.ckan.org/en/latest/datastore-api.html
+[ckan-api]: http://docs.ckan.org/en/latest/maintaining/datastore.html#the-datastore-api
 [recline-backend]: http://reclinejs.com/docs/backends.html
 [Recline]: http://reclinejs.com/
 
