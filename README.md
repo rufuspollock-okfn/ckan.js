@@ -7,7 +7,7 @@ DataStore API][ckan-api].
 It also provides a [Recline compatible backend][recline-backend].
 
 [CKAN]: http://ckan.org/
-[ckan-api]: http://docs.ckan.org/en/latest/datastore-api.html
+[ckan-api]: http://docs.ckan.org/en/latest/maintaining/datastore.html#the-datastore-api
 [recline-backend]: http://reclinejs.com/docs/backends.html
 [Recline]: http://reclinejs.com/
 
@@ -151,7 +151,7 @@ var csv = require('csv');
 csv()
   .from('path/to/csv-file.csv', {columns: true})
   .to.array(function(data, count) {
-    client.create({
+    client.action('datastore_create', {
         resource_id: resourceId,
         records: data
       },
@@ -171,7 +171,7 @@ details of options:
 [ds-search]: http://docs.ckan.org/en/latest/maintaining/datastore.html#ckanext.datastore.logic.action.datastore_search
 
 ```
-client.action('dataset_search', {
+client.action('datastore_search', {
     resource_id: '...',
     q: '...'
   },
@@ -185,7 +185,7 @@ client.action('dataset_search', {
 Or using SQL support:
 
 ```
-client.action('dataset_search_sql', {
+client.action('datastore_search_sql', {
     sql: '...'
   },
   function(err, out) {
@@ -213,7 +213,7 @@ client.datastoreQuery(queryObj, function(err, out) {
 And for SQL
 
 ```
-client.datastoreQuery(sql, function(err, out) {
+client.datastoreSqlQuery(sql, function(err, out) {
   // out will follow recline structure, viz
   {
     total: ..
