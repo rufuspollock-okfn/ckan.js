@@ -171,7 +171,7 @@ details of options:
 [ds-search]: http://docs.ckan.org/en/latest/maintaining/datastore.html#ckanext.datastore.logic.action.datastore_search
 
 ```
-client.action('dataset_search', {
+client.action('datastore_search', {
     resource_id: '...',
     q: '...'
   },
@@ -185,7 +185,7 @@ client.action('dataset_search', {
 Or using SQL support:
 
 ```
-client.action('dataset_search_sql', {
+client.action('datastore_search_sql', {
     sql: '...'
   },
   function(err, out) {
