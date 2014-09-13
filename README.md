@@ -151,7 +151,7 @@ var csv = require('csv');
 csv()
   .from('path/to/csv-file.csv', {columns: true})
   .to.array(function(data, count) {
-    client.create({
+    client.action('datastore_create', {
         resource_id: resourceId,
         records: data
       },
