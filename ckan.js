@@ -117,7 +117,7 @@ if (isNodeModule) {
     var data = {
       resource_id: '_table_metadata'
     };
-    return this._client.action('datastore_search', data, cb);
+    return this.action('datastore_search', data, cb);
   };
 
   // Utilities
