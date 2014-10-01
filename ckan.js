@@ -3,7 +3,7 @@ var CKAN = {};
 var isNodeModule = (typeof module !== 'undefined' && module != null && typeof require !== 'undefined');
 
 if (isNodeModule) {
-  var _ = require('underscore')
+  var _ = require('lodash')
     , request = require('request')
     ;
   module.exports = CKAN;
