@@ -1,6 +1,6 @@
 {
     "name": "ckan"
-  , "version": "0.2.2"
+  , "version": "0.2.3"
   , "author": "Open Knowledge Foundation <labs@okfn.org>"
   , "main": "ckan.js"
   , "repository": {
@@ -9,8 +9,8 @@
   }
   , "license": "MIT"
   , "dependencies": {
-      "request": ""
-    , "underscore": ""
+      "request": "~= 2.51.0"
+    , "underscore": "~= 1.7.0"
   }
   , "devDependencies": {
   }
