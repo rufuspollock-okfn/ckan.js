@@ -15,15 +15,17 @@ It also provides a [Recline compatible backend][recline-backend].
 
 ### Browser
 
-Just add the `ckan.js` to your page.
+The [JQuery library](https://jquery.com/) is required for use in the browser.  After that, just add the `ckan.js` script to your page.
 
 ```
+<script src="jquery-2.1.4.min.js"></script>
 <script src="ckan.js"></script>
 ```
 
 You can also use our hosted one:
 
 ```
+<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
 <script src="http://okfnlabs.org/ckan.js/ckan.js"></script>
 ```
 
