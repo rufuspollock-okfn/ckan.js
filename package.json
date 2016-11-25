@@ -11,6 +11,9 @@
   , "dependencies": {
       "request": "~= 2.51.0"
     , "underscore": "~= 1.7.0"
+    , "restler": "^3.4.0"
+    , "mime-types": "^2.1.13"
+    , "async": "^2.1.4"
   }
   , "devDependencies": {
   }
