@@ -1,5 +1,7 @@
 var CKAN = {};
 
+var rest = require('restler');
+var jsdom = require('jsdom');
 var isNodeModule = (typeof module !== 'undefined' && module != null && typeof require !== 'undefined');
 
 if (isNodeModule) {
@@ -25,45 +27,151 @@ if (isNodeModule) {
      * @constructor
      */
 
-    my.Client = function(endpoint, username, password, callback)
+    my.Client.createAndAuthenticate = function(endpoint, username, password, callback)
     {
-        post({
-            url : endpoint + "/login_generic",
-            expected : 302,
-            data : {
-                login    : username,
-                password : password,
-                remember : 63072000
-            },
-            callback : function(error, response) {
-                if( error ) return callback(error);
-                scrapeToken();
-            }
-        });
-
-        // HACK, credit https://github.com/jrmerz/node-ckan
+        var self = this;
+        //credit https://github.com/jrmerz/node-ckan
+        // HACK
         // TODO: can we get this token from the cookie?
-        function scrapeToken()  {
-            get({
-                url : server + "/user/"+username,
-                callback : function(error, body) {
-                    if( error ) return callback(error);
+        function scrapeToken(callback)  {
+            rest.get(
+                endpoint + "/user/"+username,
+                {}
+            ).on('complete', function(body, response) {
+                if(response != null && response.statusCode == 200)
+                {
                     jsdom.env(body,
                         ["http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"],
                         function(errors, window) {
                             var apikey = window.$("dd.value code");
                             if( apikey.length > 0 ) {
                                 self.apiKey = apikey.html();
-                                callback();
+                                callback(null, self);
                             } else {
-                                callback({error:true,message:"login failed"});
+                                callback(1, {error:true,message:"login failed"});
                             }
                         }
                     );
                 }
-            })
+                else
+                {
+                    callback(1, response);
+                }
+            }).on('error', function(body, response) {
+                if(response != null  && response.statusCode == 200)
+                {
+                    callback(null, response);
+                }
+                else
+                {
+                    callback(1, "Unknown error occurred uploading file to CKAN");
+                }
+            });
         }
+
+        rest.post(
+            endpoint + "/login_generic",
+            {
+                data: {
+                    login: username,
+                    password: password,
+                    remember: 63072000
+                }
+            }
+        ).on('complete', function(body, response) {
+            if(response != null && response.statusCode == 200)
+            {
+                scrapeToken(callback);
+            }
+            else
+            {
+                callback(1, response)
+            }
+        }).on('error', function(response, body) {
+            if(response != null && response.success)
+            {
+                callback(null, body);
+            }
+            else
+            {
+                callback(1, "Unknown error occurred uploading file to CKAN");
+            }
+        });
     }
+
+    my.Client.prototype.action = function(name, data, cb) {
+        if (name.indexOf('dataset_' === 0)) {
+            name = name.replace('dataset_', 'package_');
+        }
+        var options = {
+            url: this.endpoint + '/3/action/' + name,
+            data: data,
+            type: 'POST'
+        };
+        return this._ajax(options, cb);
+    };
+
+    // make an AJAX request
+    my.Client.prototype._ajax = function(options, cb) {
+        options.headers = options.headers || {};
+        if (this.apiKey) {
+            options.headers['X-CKAN-API-KEY'] = this.apiKey;
+        }
+        var meth = isNodeModule ? _nodeRequest : _browserRequest;
+        return meth(options, cb);
+    }
+
+    // Like search but supports ReclineJS style query structure
+    //
+    // Primarily for use by Recline backend below
+    my.Client.prototype.datastoreQuery = function(queryObj, cb) {
+        var actualQuery = my._normalizeQuery(queryObj);
+        this.action('datastore_search', actualQuery, function(err, results) {
+            if (err) {
+                cb(err);
+                return;
+            }
+
+            // map ckan types to our usual types ...
+            var fields = _.map(results.result.fields, function(field) {
+                field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
+                return field;
+            });
+            var out = {
+                total: results.result.total,
+                fields: fields,
+                hits: results.result.records
+            };
+            cb(null, out);
+        });
+    };
+
+    my.Client.prototype.datastoreSqlQuery = function(sql, cb) {
+        this.action('datastore_search_sql', {sql: sql}, function(err, results) {
+            if (err) {
+                var parsed = JSON.parse(err.message);
+                var errOut = {
+                    original: err,
+                    code: err.code,
+                    message: parsed.error.info.orig[0]
+                };
+                cb(errOut);
+                return;
+            }
+
+            // map ckan types to our usual types ...
+            var fields = _.map(results.result.fields, function(field) {
+                field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
+                return field;
+            });
+            var out = {
+                total: results.result.length,
+                fields: fields,
+                hits: results.result.records
+            };
+            cb(null, out);
+        });
+    };
 
     /**
      * Uploads a file into a CKAN Dataset
@@ -79,7 +187,7 @@ if (isNodeModule) {
      * @param {boolean} [overwriteIfExists] Will overwrite a file if it exists in the @packageId
      */
 
-    my.client.upload_file_into_package = function(
+    my.Client.upload_file_into_package = function(
         absolutePathToFileToBeUploaded,
         packageId,
         description,
@@ -146,7 +254,6 @@ if (isNodeModule) {
                 {
                     if (response.success)
                     {
-                        var rest = require('restler');
                         var fs = require('fs');
 
                         fs.stat(file.absolute_path, function(err, stats){
@@ -291,80 +398,6 @@ if (isNodeModule) {
             callback(err, results);
         });
     }
-
-    my.Client.prototype.action = function(name, data, cb) {
-        if (name.indexOf('dataset_' === 0)) {
-            name = name.replace('dataset_', 'package_');
-        }
-        var options = {
-            url: this.endpoint + '/3/action/' + name,
-            data: data,
-            type: 'POST'
-        };
-        return this._ajax(options, cb);
-    };
-
-    // make an AJAX request
-    my.Client.prototype._ajax = function(options, cb) {
-        options.headers = options.headers || {};
-        if (this.apiKey) {
-            options.headers['X-CKAN-API-KEY'] = this.apiKey;
-        }
-        var meth = isNodeModule ? _nodeRequest : _browserRequest;
-        return meth(options, cb);
-    }
-
-    // Like search but supports ReclineJS style query structure
-    //
-    // Primarily for use by Recline backend below
-    my.Client.prototype.datastoreQuery = function(queryObj, cb) {
-        var actualQuery = my._normalizeQuery(queryObj);
-        this.action('datastore_search', actualQuery, function(err, results) {
-            if (err) {
-                cb(err);
-                return;
-            }
-
-            // map ckan types to our usual types ...
-            var fields = _.map(results.result.fields, function(field) {
-                field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
-                return field;
-            });
-            var out = {
-                total: results.result.total,
-                fields: fields,
-                hits: results.result.records
-            };
-            cb(null, out);
-        });
-    };
-
-    my.Client.prototype.datastoreSqlQuery = function(sql, cb) {
-        this.action('datastore_search_sql', {sql: sql}, function(err, results) {
-            if (err) {
-                var parsed = JSON.parse(err.message);
-                var errOut = {
-                    original: err,
-                    code: err.code,
-                    message: parsed.error.info.orig[0]
-                };
-                cb(errOut);
-                return;
-            }
-
-            // map ckan types to our usual types ...
-            var fields = _.map(results.result.fields, function(field) {
-                field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
-                return field;
-            });
-            var out = {
-                total: results.result.length,
-                fields: fields,
-                hits: results.result.records
-            };
-            cb(null, out);
-        });
-    };
 
     my.ckan2JsonTableSchemaTypes = {
         'text': 'string',
