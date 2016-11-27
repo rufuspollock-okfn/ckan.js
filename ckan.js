@@ -1,6 +1,7 @@
 var CKAN = {};
 
 var rest = require('restler');
+var request = require('request');
 var jsdom = require('jsdom');
 var isNodeModule = (typeof module !== 'undefined' && module != null && typeof require !== 'undefined');
 
@@ -12,6 +13,9 @@ if (isNodeModule) {
 }
 
 (function(my) {
+
+    var self = my;
+
     my.Client = function(endpoint, apiKey) {
         this.endpoint = _getEndpoint(endpoint);
         this.apiKey = apiKey;
@@ -27,23 +31,27 @@ if (isNodeModule) {
      * @constructor
      */
 
-    my.Client.createAndAuthenticate = function(endpoint, username, password, callback)
+    my.Client.prototype.authenticate = function(endpoint, username, password, callback)
     {
-        var self = this;
+        this.endpoint = _getEndpoint(endpoint);
+
         //credit https://github.com/jrmerz/node-ckan
         // HACK
         // TODO: can we get this token from the cookie?
         function scrapeToken(callback)  {
-            rest.get(
-                endpoint + "/user/"+username,
-                {}
-            ).on('complete', function(body, response) {
-                if(response != null && response.statusCode == 200)
+
+            request(
+                {
+                    url : endpoint + "/user/"+username,
+                    jar : true,
+                    method : "GET"
+                }, function (error, response, body) {
+                if(error == null && response.statusCode == 200)
                 {
                     jsdom.env(body,
                         ["http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"],
                         function(errors, window) {
-                            var apikey = window.$("dd.value code");
+                            var apikey = window.$("dd.value > code");
                             if( apikey.length > 0 ) {
                                 self.apiKey = apikey.html();
                                 callback(null, self);
@@ -57,44 +65,32 @@ if (isNodeModule) {
                 {
                     callback(1, response);
                 }
-            }).on('error', function(body, response) {
-                if(response != null  && response.statusCode == 200)
-                {
-                    callback(null, response);
-                }
-                else
-                {
-                    callback(1, "Unknown error occurred uploading file to CKAN");
-                }
             });
         }
 
-        rest.post(
-            endpoint + "/login_generic",
+        var querystring = require('querystring');
+
+        // Build the post string from an object
+        var post_data = querystring.stringify({
+            'login' : username,
+            'password': password,
+            'remember': 63072000
+        });
+
+        request({
+            url : endpoint + "/login_generic?" + post_data,
+            jar : true,
+            method : "POST"
+        }, function (error, response, body) {
+            if(!error)
             {
-                data: {
-                    login: username,
-                    password: password,
-                    remember: 63072000
-                }
-            }
-        ).on('complete', function(body, response) {
-            if(response != null && response.statusCode == 200)
-            {
-                scrapeToken(callback);
+                scrapeToken(function(err, result){
+                    callback(err, result);
+                });
             }
             else
             {
                 callback(1, response)
-            }
-        }).on('error', function(response, body) {
-            if(response != null && response.success)
-            {
-                callback(null, body);
-            }
-            else
-            {
-                callback(1, "Unknown error occurred uploading file to CKAN");
             }
         });
     }
