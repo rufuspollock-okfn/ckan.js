@@ -1,6 +1,7 @@
 var CKAN = {};
 
 var rest = require('restler');
+var async = require('async');
 var request = require('request');
 var jsdom = require('jsdom');
 var isNodeModule = (typeof module !== 'undefined' && module != null && typeof require !== 'undefined');
@@ -13,8 +14,6 @@ if (isNodeModule) {
 }
 
 (function(my) {
-
-    var self = my;
 
     my.Client = function(endpoint, apiKey) {
         this.endpoint = _getEndpoint(endpoint);
@@ -33,6 +32,7 @@ if (isNodeModule) {
 
     my.Client.prototype.authenticate = function(endpoint, username, password, callback)
     {
+        var self = this;
         this.endpoint = _getEndpoint(endpoint);
 
         //credit https://github.com/jrmerz/node-ckan
@@ -54,7 +54,7 @@ if (isNodeModule) {
                             var apikey = window.$("dd.value > code");
                             if( apikey.length > 0 ) {
                                 self.apiKey = apikey.html();
-                                callback(null, self);
+                                callback(null, apikey);
                             } else {
                                 callback(1, {error:true,message:"login failed"});
                             }
@@ -85,7 +85,12 @@ if (isNodeModule) {
             if(!error)
             {
                 scrapeToken(function(err, result){
-                    callback(err, result);
+                    if(!err)
+                    {
+                        self.authenticated = true;
+                    }
+
+                    callback(err, self);
                 });
             }
             else
@@ -170,6 +175,51 @@ if (isNodeModule) {
     };
 
     /**
+     * Uploads a series of files into the CKAN repository
+     * @param resources Array of resources to upload
+     * @param packageId Id of the ckan dataset (package) into which to upload / update the files
+     * @param callback Response callback
+     */
+
+    my.Client.prototype.upload_files_into_package = function(
+        resources,
+        packageId,
+        callback)
+    {
+        var self = this;
+
+        var uploadFile = function(resource, cb)
+        {
+
+            self.upload_file_into_package(
+                resource.absolute_filepath,
+                packageId,
+                resource.description,
+                resource.filename,
+                resource.extension,
+                resource.format,
+                function(err, result){
+                    if(!err)
+                    {
+                        cb(err, result);
+                    }
+                    else
+                    {
+                        cb(err, result);
+                    }
+                },
+                resource.resourceUrl,
+                resource.mimetype,
+                resource.overwriteIfExists
+            );
+        }
+
+        async.map(resources, uploadFile, function(err, results){
+            callback(err, results);
+        });
+    }
+
+    /**
      * Uploads a file into a CKAN Dataset
      * @param absolutePathToFileToBeUploaded
      * @param packageId ID of the dataset into which the file needs to be uploaded
@@ -183,7 +233,7 @@ if (isNodeModule) {
      * @param {boolean} [overwriteIfExists] Will overwrite a file if it exists in the @packageId
      */
 
-    my.Client.upload_file_into_package = function(
+    my.Client.prototype.upload_file_into_package = function(
         absolutePathToFileToBeUploaded,
         packageId,
         description,
@@ -199,7 +249,7 @@ if (isNodeModule) {
         var self = this;
         if(resourceUrl == null)
         {
-            resourceUrl = self + "/dataset/" + packageId + "/resource/" + filename;
+            resourceUrl = self.endpoint + "/dataset/" + packageId + "/resource/" + filename;
         }
 
         if(mimetype == null)
