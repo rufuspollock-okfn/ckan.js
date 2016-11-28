@@ -5,6 +5,7 @@ var async = require('async');
 var request = require('request');
 var jsdom = require('jsdom');
 var isNodeModule = (typeof module !== 'undefined' && module != null && typeof require !== 'undefined');
+var path = require('path');
 
 if (isNodeModule) {
     var _ = require('underscore')
@@ -15,8 +16,17 @@ if (isNodeModule) {
 
 (function(my) {
 
-    my.Client = function(endpoint, apiKey) {
-        this.endpoint = _getEndpoint(endpoint);
+    function getCkanFilename(file) {
+        var parts = file.split("/");
+        var filename = parts[parts.length-1];
+        var root = filename.match(/(.*)\.[^.]+$/)[1].replace(/^[A-Za-z0-9_]/,'-');
+        parts = filename.split(".");
+        return root + "." + parts[parts.length-1];
+    }
+
+    my.Client = function(hostUrl, apiKey) {
+        this.host = hostUrl;
+        this.endpoint = _getEndpoint(hostUrl);
         this.apiKey = apiKey;
     };
 
@@ -30,10 +40,11 @@ if (isNodeModule) {
      * @constructor
      */
 
-    my.Client.prototype.authenticate = function(endpoint, username, password, callback)
+    my.Client.prototype.authenticate = function(hostUrl, username, password, callback)
     {
         var self = this;
-        this.endpoint = _getEndpoint(endpoint);
+        this.endpoint = _getEndpoint(hostUrl);
+        this.host = hostUrl;
 
         //credit https://github.com/jrmerz/node-ckan
         // HACK
@@ -42,7 +53,7 @@ if (isNodeModule) {
 
             request(
                 {
-                    url : endpoint + "/user/"+username,
+                    url : self.host + "/user/"+username,
                     jar : true,
                     method : "GET"
                 }, function (error, response, body) {
@@ -78,7 +89,7 @@ if (isNodeModule) {
         });
 
         request({
-            url : endpoint + "/login_generic?" + post_data,
+            url : self.host + "/login_generic?" + post_data,
             jar : true,
             method : "POST"
         }, function (error, response, body) {
@@ -190,9 +201,8 @@ if (isNodeModule) {
 
         var uploadFile = function(resource, cb)
         {
-
             self.upload_file_into_package(
-                resource.absolute_filepath,
+                resource.absolute_file_path,
                 packageId,
                 resource.description,
                 resource.filename,
@@ -210,7 +220,8 @@ if (isNodeModule) {
                 },
                 resource.resourceUrl,
                 resource.mimetype,
-                resource.overwriteIfExists
+                resource.overwrite_if_exists,
+                resource.id
             );
         }
 
@@ -231,6 +242,7 @@ if (isNodeModule) {
      * @param {string} [resourceUrl] Final URL of the uploaded resource (typically http://ckan-server.com/dataset/ >>>>>packageID<<<<<< /resource/ >>>>>FileName<<<<<
      * @param {string} [mimetype] of the uploaded file
      * @param {boolean} [overwriteIfExists] Will overwrite a file if it exists in the @packageId
+     * @param {string} [resourceId] resource ID of the resource to be uploaded
      */
 
     my.Client.prototype.upload_file_into_package = function(
@@ -243,13 +255,14 @@ if (isNodeModule) {
         callback,
         resourceUrl,
         mimetype,
-        overwriteIfExists
+        overwriteIfExists,
+        resourceId
     )
     {
         var self = this;
         if(resourceUrl == null)
         {
-            resourceUrl = self.endpoint + "/dataset/" + packageId + "/resource/" + filename;
+            resourceUrl = self.host + "/dataset/" + packageId + "/resource/" + fileName;
         }
 
         if(mimetype == null)
@@ -258,9 +271,24 @@ if (isNodeModule) {
             mimetype = mime.lookup(extension);
         }
 
+        if(fileName == null)
+        {
+            fileName = path.basename(absolutePathToFileToBeUploaded);
+        }
+
         if(overwriteIfExists === null)
         {
             overwriteIfExists = false;
+        }
+
+        if(resourceId == null)
+        {
+            resourceId = getCkanFilename(fileName);
+        }
+
+        if(format == null)
+        {
+            format = extension.toUpperCase();
         }
 
         var file = {
@@ -269,13 +297,17 @@ if (isNodeModule) {
             description: description || '< no description available >',
             name: fileName,
             mimetype: mimetype,
-            extension : fileExtension
+            extension : extension,
+            id : resourceId,
+            absolute_file_path : absolutePathToFileToBeUploaded,
+            format : format
         };
 
-        var checkIfPackageExists = function(callback)
+        var checkIfResourceExists = function(file, callback)
         {
-            var queryString = "res_url: \""+resourceUrl+"\"";
-            my.Client.prototype.action("package_search",
+            var queryString = "res_url: \""+file.url+"\"";
+
+            self.action("package_search",
                 {
                     fq : queryString
                 },
@@ -283,7 +315,14 @@ if (isNodeModule) {
                 {
                     if(!err && response.result != null)
                     {
-                        callback(err, response.result.success);
+                        if(response.result.results[0].length == 1)
+                        {
+                            callback(null, response.result.results[0].id);
+                        }
+                        else
+                        {
+                            callback(null, null);
+                        }
                     }
                     else
                     {
@@ -294,7 +333,7 @@ if (isNodeModule) {
 
         var createResourceInPackage = function(callback)
         {
-            my.Client.prototype.action("resource_create",
+            self.action("resource_create",
                 file,
                 function (err, response)
                 {
@@ -302,41 +341,57 @@ if (isNodeModule) {
                     {
                         var fs = require('fs');
 
-                        fs.stat(file.absolute_path, function(err, stats){
-                            if(!err)
+                        path.exists(file.absolute_file_path, function(exists) {
+                            if(exists)
                             {
-                                rest.post(self.endpoint +"/api/action/resource_create", {
-                                    multipart: true,
-                                    headers : {
-                                        Authorization: self.apiKey
-                                    },
-                                    data: {
-                                        id: response.result.id,
-                                        upload: rest.file(absolutePathToFileToBeUploaded, null, stats.size, null, file.mimetype),
-                                        format : format,
-                                        name : file.name,
-                                        description : file.description,
-                                        url : response.result.url,
-                                        package_id : packageId
-                                    }
-                                }).on('complete', function(response, body) {
-                                    if(response != null && response.success)
+                                var formData =  {
+                                    id: response.result.id,
+                                    upload: fs.createReadStream(file.absolute_file_path),
+                                    format : file.format,
+                                    name : file.name,
+                                    description : file.description,
+                                    url : response.result.url,
+                                    package_id : file.package_id
+                                };
+
+                                request.post(
                                     {
-                                        callback(null, body);
-                                    }
-                                    else
-                                    {
-                                        callback(1, response.result)
-                                    }
-                                }).on('error', function(response, body) {
-                                    if(response != null && response.success)
-                                    {
-                                        callback(null, body);
-                                    }
-                                    else
-                                    {
-                                        callback(1, "Unknown error occurred uploading file to CKAN");
-                                    }
+                                        url:self.endpoint +"/action/resource_create",
+                                        formData: formData,
+                                        headers : {
+                                            Authorization: self.apiKey
+                                        }
+                                    },function(err, response, body) {
+                                        if(!err)
+                                        {
+                                            if(response != null && response.statusCode == 200)
+                                            {
+                                                try{
+                                                    callback(null, JSON.parse(response.toJSON().body));
+                                                }
+                                                catch(e)
+                                                {
+                                                    var msg = "Upload complete but there was an error parsing the response from the CKAN repository."
+                                                    callback(null, msg);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                callback(1, response.result)
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if(err != null && response != null && response.success)
+                                            {
+                                                callback(null, body);
+                                            }
+                                            else
+                                            {
+                                                callback(1, "Unknown error occurred uploading file to CKAN");
+                                            }
+                                        }
+
                                 });
                             }
                             else
@@ -353,9 +408,9 @@ if (isNodeModule) {
             );
         };
 
-        var updateResourceInPackage = function(callback)
+        var updateResourceInPackage = function(file, callback)
         {
-            my.Client.prototype.action("resource_update",
+            self.action("resource_update",
                 file,
                 function (err, response)
                 {
@@ -364,42 +419,58 @@ if (isNodeModule) {
                         var rest = require('restler');
                         var fs = require('fs');
 
-                        fs.stat(file.absolute_path, function(err, stats){
-                            if(!err)
+                        path.exists(file.absolute_file_path, function(exists) {
+                            if(exists)
                             {
-                                rest.post(self.endpoint +"/api/action/resource_update", {
-                                    multipart: true,
-                                    headers : {
-                                        Authorization: self.apiKey
-                                    },
-                                    data: {
-                                        id: response.result.id,
-                                        upload: rest.file(absolutePathToFileToBeUploaded, null, stats.size, null, file.mimetype),
-                                        format : format,
-                                        name : file.name,
-                                        description : file.description,
-                                        url : response.result.url,
-                                        package_id : packageId
-                                    }
-                                }).on('complete', function(response, body) {
-                                    if(response != null && response.success)
+                                var formData =  {
+                                    id: response.result.id,
+                                    upload: rest.file(absolutePathToFileToBeUploaded, null, stats.size, null, file.mimetype),
+                                    format : format,
+                                    name : file.name,
+                                    description : file.description,
+                                    url : response.result.url,
+                                    package_id : packageId
+                                };
+
+                                request.post(
                                     {
-                                        callback(null, body);
-                                    }
-                                    else
-                                    {
-                                        callback(1, response.result)
-                                    }
-                                }).on('error', function(response, body) {
-                                    if(response != null && response.success)
-                                    {
-                                        callback(null, body);
-                                    }
-                                    else
-                                    {
-                                        callback(1, "Unknown error occurred uploading file to CKAN");
-                                    }
-                                });
+                                        url:self.endpoint +"/action/resource_update",
+                                        formData: formData,
+                                        headers : {
+                                            Authorization: self.apiKey
+                                        }
+                                    },function(err, response, body) {
+                                        if(!err)
+                                        {
+                                            if(response != null && response.statusCode == 200)
+                                            {
+                                                try{
+                                                    callback(null, JSON.parse(response.toJSON().body));
+                                                }
+                                                catch(e)
+                                                {
+                                                    var msg = "Upload complete but there was an error parsing the response from the CKAN repository."
+                                                    callback(null, msg);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                callback(1, response.result)
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if(err != null && response != null && response.success)
+                                            {
+                                                callback(null, body);
+                                            }
+                                            else
+                                            {
+                                                callback(1, "Unknown error occurred uploading file to CKAN");
+                                            }
+                                        }
+
+                                    });
                             }
                             else
                             {
@@ -420,15 +491,16 @@ if (isNodeModule) {
         async.waterfall([
             function(cb)
             {
-                checkIfPackageExists(cb);
+                checkIfResourceExists(file, cb);
             },
-            function(exists, cb)
+            function(existingResourceId, cb)
             {
-                if(exists)
+                if(existingResourceId != null)
                 {
+                    file.id = existingResourceId;
                     if(overwriteIfExists)
                     {
-                        updateResourceInPackage(cb);
+                        updateResourceInPackage(file, cb);
                     }
                     else
                     {

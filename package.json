@@ -15,7 +15,8 @@
     , "mime-types": "^2.1.13"
     , "async": "^2.1.4"
     , "jsdom": "^7.0.0"
-	, "querystring" : "*"
+    , "path" : "*"
+	  , "querystring" : "*"
   }
   , "devDependencies": {
   }
