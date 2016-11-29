@@ -1,11 +1,10 @@
 var CKAN = {};
 
-var rest = require('restler');
 var async = require('async');
 var request = require('request');
 var jsdom = require('jsdom');
+var slugify = require('slugify')
 var isNodeModule = (typeof module !== 'undefined' && module != null && typeof require !== 'undefined');
-var path = require('path');
 
 if (isNodeModule) {
     var _ = require('underscore')
@@ -16,13 +15,7 @@ if (isNodeModule) {
 
 (function(my) {
 
-    function getCkanFilename(file) {
-        var parts = file.split("/");
-        var filename = parts[parts.length-1];
-        var root = filename.match(/(.*)\.[^.]+$/)[1].replace(/^[A-Za-z0-9_]/,'-');
-        parts = filename.split(".");
-        return root + "." + parts[parts.length-1];
-    }
+    var path = require('path');
 
     my.Client = function(hostUrl, apiKey) {
         this.host = hostUrl;
@@ -225,7 +218,7 @@ if (isNodeModule) {
             );
         }
 
-        async.map(resources, uploadFile, function(err, results){
+        async.eachSeries(resources, uploadFile, function(err, results){
             callback(err, results);
         });
     }
@@ -283,7 +276,7 @@ if (isNodeModule) {
 
         if(resourceId == null)
         {
-            resourceId = getCkanFilename(fileName);
+            resourceId = slugify(fileName);
         }
 
         if(format == null)
@@ -315,7 +308,13 @@ if (isNodeModule) {
                 {
                     if(!err && response.result != null)
                     {
-                        if(response.result.results[0].length == 1)
+                        if(
+                            response != null &&
+                            response.result != null &&
+                            response.result.results != null &&
+                            response.result.results instanceof Array &&
+                            response.result.results.length == 1
+                        )
                         {
                             callback(null, response.result.results[0].id);
                         }
@@ -341,8 +340,8 @@ if (isNodeModule) {
                     {
                         var fs = require('fs');
 
-                        path.exists(file.absolute_file_path, function(exists) {
-                            if(exists)
+                        fs.stat(file.absolute_file_path, function(err, stats){
+                            if(err == null)
                             {
                                 var formData =  {
                                     id: response.result.id,
@@ -392,11 +391,15 @@ if (isNodeModule) {
                                             }
                                         }
 
-                                });
+                                    });
+                            }
+                            else if(err.code == 'ENOENT')
+                            {
+                                callback(1, "File " + absolutePathToFileToBeUploaded + " does not exist.");
                             }
                             else
                             {
-                                callback(1, "File " + absolutePathToFileToBeUploaded + " does not exist.");
+                                console.log('Some other error: ', err.code);
                             }
                         });
                     }
@@ -416,20 +419,19 @@ if (isNodeModule) {
                 {
                     if (response.success)
                     {
-                        var rest = require('restler');
                         var fs = require('fs');
 
-                        path.exists(file.absolute_file_path, function(exists) {
-                            if(exists)
+                        fs.stat(file.absolute_file_path, function(err, stats){
+                            if(err == null)
                             {
                                 var formData =  {
                                     id: response.result.id,
-                                    upload: rest.file(absolutePathToFileToBeUploaded, null, stats.size, null, file.mimetype),
-                                    format : format,
+                                    upload: fs.createReadStream(file.absolute_file_path),
+                                    format : file.formate,
                                     name : file.name,
                                     description : file.description,
                                     url : response.result.url,
-                                    package_id : packageId
+                                    package_id : response.result.package_id
                                 };
 
                                 request.post(
@@ -472,9 +474,11 @@ if (isNodeModule) {
 
                                     });
                             }
-                            else
-                            {
+                            else if(err.code == 'ENOENT') {
                                 callback(1, "File " + absolutePathToFileToBeUploaded + " does not exist.");
+                            } else
+                            {
+                                callback(1, err);
                             }
                         });
                     }

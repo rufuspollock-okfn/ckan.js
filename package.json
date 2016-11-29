@@ -17,6 +17,7 @@
     , "jsdom": "^7.0.0"
     , "path" : "*"
 	  , "querystring" : "*"
+	  , "slugify" : "*"
   }
   , "devDependencies": {
   }
