@@ -1,3 +1,5 @@
+[![CDNJS](https://img.shields.io/cdnjs/v/ckan.svg)](https://cdnjs.com/libraries/ckan)
+
 A Javascript client library for [CKAN][] designed for both the browser and
 NodeJS.
 
