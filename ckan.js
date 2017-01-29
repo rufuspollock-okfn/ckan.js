@@ -10,9 +10,10 @@ if (isNodeModule) {
 }
 
 (function(my) {
-  my.Client = function(endpoint, apiKey) { 
+  my.Client = function(endpoint, apiKey) {
     this.endpoint = _getEndpoint(endpoint);
     this.apiKey = apiKey;
+    this.requestType = 'POST';
   };
 
   my.Client.prototype.action = function(name, data, cb) {
@@ -22,7 +23,7 @@ if (isNodeModule) {
     var options = {
       url: this.endpoint + '/3/action/' + name,
       data: data,
-      type: 'POST'
+      type: this.requestType
     };
     return this._ajax(options, cb);
   };
@@ -99,7 +100,7 @@ if (isNodeModule) {
     'bool': 'boolean',
   };
 
-  // 
+  //
   my.jsonTableSchema2CkanTypes = {
     'string': 'text',
     'number': 'float',
@@ -143,7 +144,7 @@ if (isNodeModule) {
     // we could just call request but that's a PITA to mock plus request.get = request (if you look at the source code)
     request(conf, function(err, res, body) {
       if (!err && res && !(res.statusCode === 200 || res.statusCode === 302)) {
-        err = 'CKANJS API Error. HTTP code ' + res.statusCode + '. Message: ' + JSON.stringify(body, null, 2);
+        err = 'CKANJS API Error. HTTP code ' + res.statusCode + '. Options: ' + JSON.stringify(options, null, 2) + ' Message: ' + JSON.stringify(body, null, 2);
       }
       cb(err, body);
     });
@@ -160,7 +161,7 @@ if (isNodeModule) {
         code: obj.status,
         message: obj.responseText
       }
-      cb(err); 
+      cb(err);
     }
     if (options.headers) {
       options.beforeSend = function(req) {
@@ -222,7 +223,7 @@ if (isNodeModule) {
 // This provides connection to the CKAN DataStore (v2)
 //
 // General notes
-// 
+//
 // We need 2 things to make most requests:
 //
 // 1. CKAN API endpoint
@@ -230,13 +231,13 @@ if (isNodeModule) {
 //
 // There are 2 ways to specify this information.
 //
-// EITHER (checked in order): 
+// EITHER (checked in order):
 //
 // * Every dataset must have an id equal to its resource id on the CKAN instance
 // * The dataset has an endpoint attribute pointing to the CKAN API endpoint
 //
 // OR:
-// 
+//
 // Set the url attribute of the dataset to point to the Resource on the CKAN instance. The endpoint and id will then be automatically computed.
 var recline = recline || {};
 recline.Backend = recline.Backend || {};
@@ -286,4 +287,3 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
     return dfd.promise();
   };
 }(recline.Backend.Ckan));
-
