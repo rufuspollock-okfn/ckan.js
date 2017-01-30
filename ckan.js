@@ -27,9 +27,10 @@ if (isNodeModule) {
       type: this.requestType
     };
     if (options.type == 'GET') {
-      options.url += '?' + isNodeModule ?
+      var qs = isNodeModule ?
         queryString.stringify(data, {arrayFormat: 'none'}) :
         'q=' + data.q + '&sort=' + data.sort; // i.e. other clients must use q & sort
+      options.url += '?' + qs;
     }
     return this._ajax(options, cb);
   };
