@@ -25,6 +25,9 @@ if (isNodeModule) {
       data: data,
       type: this.requestType
     };
+    if (options.type == 'GET') {
+      options.url += '?' + queryString.stringify(data);
+    }
     return this._ajax(options, cb);
   };
 

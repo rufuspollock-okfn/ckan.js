@@ -1,17 +1,17 @@
 {
-    "name": "ckan"
-  , "version": "0.2.3"
-  , "author": "Open Knowledge Foundation <labs@okfn.org>"
-  , "main": "ckan.js"
-  , "repository": {
+  "name": "ckan",
+  "version": "0.2.3",
+  "author": "Open Knowledge Foundation <labs@okfn.org>",
+  "main": "ckan.js",
+  "repository": {
     "type": "git",
     "url": "https://github.com/okfn/ckan.js"
-  }
-  , "license": "MIT"
-  , "dependencies": {
-      "request": "~= 2.51.0"
-    , "underscore": "~= 1.7.0"
-  }
-  , "devDependencies": {
-  }
+  },
+  "license": "MIT",
+  "dependencies": {
+    "query-string": "^4.3.1",
+    "request": "~= 2.51.0",
+    "underscore": "~= 1.7.0"
+  },
+  "devDependencies": {}
 }
