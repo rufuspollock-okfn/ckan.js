@@ -60,6 +60,9 @@ var client = new CKAN.Client('http://my-ckan-site.com');
 
 // You can also provide an API key (for operations that require one)
 var client = new CKAN.Client('http://my-ckan-site.com', 'my-api-key');
+
+// If your portal disallows POST requests (note: limited support in browser module)
+client.requestType = 'GET';
 ```
 
 You can now use any part of the [action API][]:
@@ -235,4 +238,3 @@ This module also provides a Recline compatible backend available as:
 
 The backend supports `fetch` and `query` but does not provide write support at
 the present time.
-
