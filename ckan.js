@@ -5,6 +5,7 @@ var isNodeModule = (typeof module !== 'undefined' && module != null && typeof re
 if (isNodeModule) {
   var _ = require('underscore')
     , request = require('request')
+    , queryString = require('query-string')
     ;
   module.exports = CKAN;
 }
@@ -26,7 +27,9 @@ if (isNodeModule) {
       type: this.requestType
     };
     if (options.type == 'GET') {
-      options.url += '?' + queryString.stringify(data);
+      options.url += '?' + isNodeModule ?
+        queryString.stringify(data, {arrayFormat: 'none'}) :
+        'q=' + data.q + '&sort=' + data.sort; // i.e. other clients must use q & sort
     }
     return this._ajax(options, cb);
   };
@@ -39,7 +42,7 @@ if (isNodeModule) {
     }
     var meth = isNodeModule ? _nodeRequest : _browserRequest;
     return meth(options, cb);
-  }
+  };
 
   // Like search but supports ReclineJS style query structure
   //
