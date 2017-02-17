@@ -277,11 +277,11 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
       , wrapper
       ;
     if (dataset.endpoint) {
-      wrapper = new CKAN.Client(dataset.endpoint);
+      wrapper = new CKAN.Client(dataset.endpoint, dataset.apiKey);
     } else {
       var out = CKAN.parseCkanResourceUrl(dataset.url);
       dataset.id = out.resource_id;
-      wrapper = new CKAN.Client(out.endpoint);
+      wrapper = new CKAN.Client(out.endpoint, dataset.apiKey);
     }
     queryObj.resource_id = dataset.id;
     wrapper.datastoreQuery(queryObj, function(err, out) {
