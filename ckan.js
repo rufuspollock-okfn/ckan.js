@@ -178,6 +178,46 @@ if (isNodeModule) {
         });
     };
 
+
+    /**
+     * Get a list of resources that where changed after a certain date in a dataset
+     * @param lastSyncDate the date of the last time the changes were synced
+     * @param packageId Id of the ckan dataset (package) to be checked
+     * @param callback Response callback
+     */
+
+    my.Client.prototype.getChangesInDatasetAfterDate = function(
+        lastSyncDate,
+        packageId,
+        callback)
+    {
+        var self = this;
+
+        self.action("package_show",
+            {
+                id: packageId
+            },
+            function (err, result) {
+                if (result.success) {
+                    folderResourcesInCkan = result.result.resources;
+                    let changedResources = [];
+                    async.map(result.result.resources, function(resource, callback){
+                        if(resource.last_modified > lastSyncDate)
+                        {
+                            changedResources.push(resource);
+                        }
+                        callback(null, resource);
+                    }, function(err, results){
+                        result.result.changedResources = changedResources;
+                        callback(err, result);
+                    });
+                }
+                else {
+                    callback(err, result);
+                }
+            });
+    }
+
     /**
      * Uploads a series of files into the CKAN repository
      * @param resources Array of resources to upload
