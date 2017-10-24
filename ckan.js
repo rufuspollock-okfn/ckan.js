@@ -105,9 +105,13 @@ if (isNodeModule) {
     }
 
     my.Client.prototype.action = function(name, data, cb) {
-        if (name.indexOf('dataset_' === 0)) {
+        if(name !== "dataset_purge" && name.indexOf('dataset_') === 0)
+        {
             name = name.replace('dataset_', 'package_');
         }
+        /*if (name.indexOf('dataset_' === 0)) {
+            name = name.replace('dataset_', 'package_');
+        }*/
         var options = {
             url: this.endpoint + '/3/action/' + name,
             data: data,
@@ -258,7 +262,10 @@ if (isNodeModule) {
             );
         }
 
-        async.eachSeries(resources, uploadFile, function(err, results){
+        /*async.eachSeries(resources, uploadFile, function(err, results){
+            callback(err, results);
+        });*/
+        async.mapSeries(resources, uploadFile, function(err, results){
             callback(err, results);
         });
     }
@@ -416,7 +423,7 @@ if (isNodeModule) {
                                             }
                                             else
                                             {
-                                                callback(1, response.result)
+                                                callback(1, response.body)
                                             }
                                         }
                                         else
