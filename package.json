@@ -9,6 +9,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "query-string": "^4.3.1",
     "request": "~= 2.51.0",
     "underscore": "~= 1.7.0",
     "restler": "^3.4.0",
