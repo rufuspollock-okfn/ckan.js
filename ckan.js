@@ -7,125 +7,47 @@ var slugify = require('slugify')
 var isNodeModule = (typeof module !== 'undefined' && module != null && typeof require !== 'undefined');
 
 if (isNodeModule) {
-    var _ = require('underscore')
-        , request = require('request')
-        ;
-    module.exports = CKAN;
+  var _ = require('underscore')
+    , request = require('request')
+    , queryString = require('query-string')
+    ;
+  module.exports = CKAN;
 }
 
 (function(my) {
+  my.Client = function(endpoint, apiKey) {
+    this.endpoint = _getEndpoint(endpoint);
+    this.apiKey = apiKey;
+    this.requestType = 'POST';
+  };
 
-    var path = require('path');
-
-    my.Client = function(hostUrl, apiKey) {
-        this.host = hostUrl;
-        this.endpoint = _getEndpoint(hostUrl);
-        this.apiKey = apiKey;
-    };
-
-    /**
-     * Creating a client via username and password authentication
-     * credit https://github.com/jrmerz/node-ckan
-     * @param endpoint
-     * @param username
-     * @param password
-     * @param callback
-     * @constructor
-     */
-
-    my.Client.prototype.authenticate = function(hostUrl, username, password, callback)
-    {
-        var self = this;
-        this.endpoint = _getEndpoint(hostUrl);
-        this.host = hostUrl;
-
-        //credit https://github.com/jrmerz/node-ckan
-        // HACK
-        // TODO: can we get this token from the cookie?
-        function scrapeToken(callback)  {
-
-            request(
-                {
-                    url : self.host + "/user/"+username,
-                    jar : true,
-                    method : "GET"
-                }, function (error, response, body) {
-                if(error == null && response.statusCode == 200)
-                {
-                    jsdom.env(body,
-                        ["http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"],
-                        function(errors, window) {
-                            var apikey = window.$("dd.value > code");
-                            if( apikey.length > 0 ) {
-                                self.apiKey = apikey.html();
-                                callback(null, apikey);
-                            } else {
-                                callback(1, {error:true,message:"login failed"});
-                            }
-                        }
-                    );
-                }
-                else
-                {
-                    callback(1, response);
-                }
-            });
-        }
-
-        var querystring = require('querystring');
-
-        // Build the post string from an object
-        var post_data = querystring.stringify({
-            'login' : username,
-            'password': password,
-            'remember': 63072000
-        });
-
-        request({
-            url : self.host + "/login_generic?" + post_data,
-            jar : true,
-            method : "POST"
-        }, function (error, response, body) {
-            if(!error)
-            {
-                scrapeToken(function(err, result){
-                    if(!err)
-                    {
-                        self.authenticated = true;
-                    }
-
-                    callback(err, self);
-                });
-            }
-            else
-            {
-                callback(1, response)
-            }
-        });
+  my.Client.prototype.action = function(name, data, cb) {
+    if (name !== "dataset_purge" && name.indexOf('dataset_') === 0) {
+      name = name.replace('dataset_', 'package_');
     }
-
-    my.Client.prototype.action = function(name, data, cb) {
-        if(name !== "dataset_purge" && name.indexOf('dataset_') === 0)
-        {
-            name = name.replace('dataset_', 'package_');
-        }
-        var options = {
-            url: this.endpoint + '/3/action/' + name,
-            data: data,
-            type: 'POST'
-        };
-        return this._ajax(options, cb);
+    var options = {
+      url: this.endpoint + '/3/action/' + name,
+      data: data,
+      type: this.requestType
     };
-
-    // make an AJAX request
-    my.Client.prototype._ajax = function(options, cb) {
-        options.headers = options.headers || {};
-        if (this.apiKey) {
-            options.headers['X-CKAN-API-KEY'] = this.apiKey;
-        }
-        var meth = isNodeModule ? _nodeRequest : _browserRequest;
-        return meth(options, cb);
+    if (options.type == 'GET') {
+      var qs = isNodeModule ?
+        queryString.stringify(data, {arrayFormat: 'none'}) :
+        'q=' + data.q + '&sort=' + data.sort; // i.e. other clients must use q & sort
+      options.url += '?' + qs;
     }
+    return this._ajax(options, cb);
+  };
+
+  // make an AJAX request
+  my.Client.prototype._ajax = function(options, cb) {
+    options.headers = options.headers || {};
+    if (this.apiKey) {
+      options.headers['X-CKAN-API-KEY'] = this.apiKey;
+    }
+    var meth = isNodeModule ? _nodeRequest : _browserRequest;
+    return meth(options, cb);
+  };
 
     // Like search but supports ReclineJS style query structure
     //
@@ -572,18 +494,18 @@ if (isNodeModule) {
         'bool': 'boolean',
     };
 
-    //
-    my.jsonTableSchema2CkanTypes = {
-        'string': 'text',
-        'number': 'float',
-        'integer': 'int',
-        'datetime': 'timestamp',
-        'boolean': 'bool',
-        'binary': 'bytea',
-        'object': 'json',
-        'array': 'text[]',
-        'any': 'text'
-    };
+  //
+  my.jsonTableSchema2CkanTypes = {
+    'string': 'text',
+    'number': 'float',
+    'integer': 'int',
+    'datetime': 'timestamp',
+    'boolean': 'bool',
+    'binary': 'bytea',
+    'object': 'json',
+    'array': 'text[]',
+    'any': 'text'
+  };
 
     // list all the resources with an entry in the DataStore
     my.Client.prototype.datastoreResources = function(cb) {
@@ -606,44 +528,44 @@ if (isNodeModule) {
         return endpoint;
     };
 
-    var _nodeRequest = function(options, cb) {
-        var conf = {
-            url: options.url,
-            headers: options.headers || {},
-            method: options.type || 'GET',
-            json: options.data
-        };
-        // we could just call request but that's a PITA to mock plus request.get = request (if you look at the source code)
-        request(conf, function(err, res, body) {
-            if (!err && res && !(res.statusCode === 200 || res.statusCode === 302)) {
-                err = 'CKANJS API Error. HTTP code ' + res.statusCode + '. Message: ' + JSON.stringify(body, null, 2);
-            }
-            cb(err, body);
-        });
+  var _nodeRequest = function(options, cb) {
+    var conf = {
+      url: options.url,
+      headers: options.headers || {},
+      method: options.type || 'GET',
+      json: options.data
     };
+    // we could just call request but that's a PITA to mock plus request.get = request (if you look at the source code)
+    request(conf, function(err, res, body) {
+      if (!err && res && !(res.statusCode === 200 || res.statusCode === 302)) {
+        err = 'CKANJS API Error. HTTP code ' + res.statusCode + '. Options: ' + JSON.stringify(options, null, 2) + ' Message: ' + JSON.stringify(body, null, 2);
+      }
+      cb(err, body);
+    });
+  };
 
-    var _browserRequest = function(options, cb) {
-        var self = this;
-        options.data = encodeURIComponent(JSON.stringify(options.data));
-        options.success = function(data) {
-            cb(null, data);
+  var _browserRequest = function(options, cb) {
+    var self = this;
+    options.data = encodeURIComponent(JSON.stringify(options.data));
+    options.success = function(data) {
+      cb(null, data);
+    }
+    options.error = function(obj, obj2, obj3) {
+      var err = {
+        code: obj.status,
+        message: obj.responseText
+      }
+      cb(err);
+    }
+    if (options.headers) {
+      options.beforeSend = function(req) {
+        for (key in options.headers) {
+          req.setRequestHeader(key, options.headers[key]);
         }
-        options.error = function(obj, obj2, obj3) {
-            var err = {
-                code: obj.status,
-                message: obj.responseText
-            }
-            cb(err);
-        }
-        if (options.headers) {
-            options.beforeSend = function(req) {
-                for (key in options.headers) {
-                    req.setRequestHeader(key, options.headers[key]);
-                }
-            };
-        }
-        return jQuery.ajax(options);
-    };
+      };
+    }
+    return jQuery.ajax(options);
+  };
 
     // only put in the module namespace so we can access for tests!
     my._normalizeQuery = function(queryObj) {
@@ -737,26 +659,25 @@ recline.Backend.Ckan = recline.Backend.Ckan || {};
         return dfd.promise();
     };
 
-    my.query = function(queryObj, dataset) {
-        var dfd = new Deferred()
-            , wrapper
-            ;
-        if (dataset.endpoint) {
-            wrapper = new CKAN.Client(dataset.endpoint);
-        } else {
-            var out = CKAN.parseCkanResourceUrl(dataset.url);
-            dataset.id = out.resource_id;
-            wrapper = new CKAN.Client(out.endpoint);
-        }
-        queryObj.resource_id = dataset.id;
-        wrapper.datastoreQuery(queryObj, function(err, out) {
-            if (err) {
-                dfd.reject(err);
-            } else {
-                dfd.resolve(out);
-            }
-        });
-        return dfd.promise();
-    };
+  my.query = function(queryObj, dataset) {
+    var dfd = new Deferred()
+      , wrapper
+      ;
+    if (dataset.endpoint) {
+      wrapper = new CKAN.Client(dataset.endpoint, dataset.apiKey);
+    } else {
+      var out = CKAN.parseCkanResourceUrl(dataset.url);
+      dataset.id = out.resource_id;
+      wrapper = new CKAN.Client(out.endpoint, dataset.apiKey);
+    }
+    queryObj.resource_id = dataset.id;
+    wrapper.datastoreQuery(queryObj, function(err, out) {
+      if (err) {
+        dfd.reject(err);
+      } else {
+        dfd.resolve(out);
+      }
+    });
+    return dfd.promise();
+  };
 }(recline.Backend.Ckan));
-
