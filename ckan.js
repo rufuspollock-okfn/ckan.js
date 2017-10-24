@@ -109,9 +109,6 @@ if (isNodeModule) {
         {
             name = name.replace('dataset_', 'package_');
         }
-        /*if (name.indexOf('dataset_' === 0)) {
-            name = name.replace('dataset_', 'package_');
-        }*/
         var options = {
             url: this.endpoint + '/3/action/' + name,
             data: data,
@@ -262,9 +259,6 @@ if (isNodeModule) {
             );
         }
 
-        /*async.eachSeries(resources, uploadFile, function(err, results){
-            callback(err, results);
-        });*/
         async.mapSeries(resources, uploadFile, function(err, results){
             callback(err, results);
         });
