@@ -10,7 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "query-string": "^4.3.1",
-    "request": "~= 2.51.0",
+    "superagent": "^3.0.0",
     "underscore": "~= 1.7.0"
   },
   "devDependencies": {}
