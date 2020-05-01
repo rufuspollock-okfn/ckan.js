@@ -1,14 +1,12 @@
 var CKAN = {};
 
-var isNodeModule = (typeof module !== 'undefined' && module != null && typeof require !== 'undefined');
+var _ = require('underscore')
+  , needle = require('needle')
+  , deferred = require('deferred')
+  , queryString = require('query-string')
+  ;
 
-if (isNodeModule) {
-  var _ = require('underscore')
-    , request = require('request')
-    , queryString = require('query-string')
-    ;
-  module.exports = CKAN;
-}
+module.exports = CKAN;
 
 (function(my) {
   my.Client = function(endpoint, apiKey) {
@@ -27,9 +25,7 @@ if (isNodeModule) {
       type: this.requestType
     };
     if (options.type == 'GET') {
-      var qs = isNodeModule ?
-        queryString.stringify(data, {arrayFormat: 'none'}) :
-        'q=' + data.q + '&sort=' + data.sort; // i.e. other clients must use q & sort
+      var qs = queryString.stringify(data, {arrayFormat: 'none'});
       options.url += '?' + qs;
     }
     return this._ajax(options, cb);
@@ -41,8 +37,7 @@ if (isNodeModule) {
     if (this.apiKey) {
       options.headers['X-CKAN-API-KEY'] = this.apiKey;
     }
-    var meth = isNodeModule ? _nodeRequest : _browserRequest;
-    return meth(options, cb);
+    return _nodeRequest(options, cb);
   };
 
   // Like search but supports ReclineJS style query structure
@@ -148,36 +143,22 @@ if (isNodeModule) {
       method: options.type || 'GET',
       json: options.data
     };
-    // we could just call request but that's a PITA to mock plus request.get = request (if you look at the source code)
-    request(conf, function(err, res, body) {
-      if (!err && res && !(res.statusCode === 200 || res.statusCode === 302)) {
-        err = 'CKANJS API Error. HTTP code ' + res.statusCode + '. Options: ' + JSON.stringify(options, null, 2) + ' Message: ' + JSON.stringify(body, null, 2);
-      }
-      cb(err, body);
-    });
-  };
-
-  var _browserRequest = function(options, cb) {
-    var self = this;
-    options.data = encodeURIComponent(JSON.stringify(options.data));
-    options.success = function(data) {
-      cb(null, data);
-    }
-    options.error = function(obj, obj2, obj3) {
-      var err = {
-        code: obj.status,
-        message: obj.responseText
-      }
-      cb(err);
-    }
-    if (options.headers) {
-      options.beforeSend = function(req) {
-        for (key in options.headers) {
-          req.setRequestHeader(key, options.headers[key]);
+    // https://github.com/tomas/needle#api
+    needle.request(
+      conf.method,
+      conf.url,
+      conf.json, // data
+      { // options
+        json: true,
+        headers: conf.headers
+      },
+      function(err, res) {
+        if (!err && res && !(res.statusCode === 200 || res.statusCode === 302)) {
+          err = 'CKANJS API Error. HTTP code ' + res.statusCode + '. Options: ' + JSON.stringify(options, null, 2) + ' Message: ' + JSON.stringify(res.body, null, 2);
         }
-      };
-    }
-    return jQuery.ajax(options);
+        cb(err, res.body);
+      }
+    );
   };
 
   // only put in the module namespace so we can access for tests!
@@ -249,33 +230,32 @@ if (isNodeModule) {
 var recline = recline || {};
 recline.Backend = recline.Backend || {};
 recline.Backend.Ckan = recline.Backend.Ckan || {};
+CKAN.recline = recline;
+
 (function(my) {
   my.__type__ = 'ckan';
 
   // private - use either jQuery or Underscore Deferred depending on what is available
-  var Deferred = _.isUndefined(this.jQuery) ? _.Deferred : jQuery.Deferred;
+  var dfd = deferred();
 
   // ### fetch
   my.fetch = function(dataset) {
-    var dfd = new Deferred()
     my.query({}, dataset)
-      .done(function(data) {
+      .then(function(err, resp, data) {
+        if (err) {
+          return dfd.reject(err);
+        }
         dfd.resolve({
           fields: data.fields,
           records: data.hits
         });
-      })
-      .fail(function(err) {
-        dfd.reject(err);
       })
       ;
     return dfd.promise();
   };
 
   my.query = function(queryObj, dataset) {
-    var dfd = new Deferred()
-      , wrapper
-      ;
+    var wrapper;
     if (dataset.endpoint) {
       wrapper = new CKAN.Client(dataset.endpoint, dataset.apiKey);
     } else {

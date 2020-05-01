@@ -238,3 +238,19 @@ This module also provides a Recline compatible backend available as:
 
 The backend supports `fetch` and `query` but does not provide write support at
 the present time.
+
+## Developer notes
+
+We are using QUnit for unit testing the webpack'ed version.
+
+`npm install -D`
+
+To install developer libraries, then:
+
+`npm run dev`
+
+To update the `dist` version of the library. Start a local web server, e.g.:
+
+`python -m http.server`
+
+And in your web browser, open http://0.0.0.0:8000/test/
