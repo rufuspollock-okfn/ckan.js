@@ -1,6 +1,6 @@
 {
   "name": "ckan",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "author": "Open Knowledge Foundation <labs@okfn.org>",
   "main": "ckan.js",
   "repository": {
@@ -9,9 +9,24 @@
   },
   "license": "MIT",
   "dependencies": {
-    "query-string": "^4.3.1",
-    "request": "~= 2.51.0",
-    "underscore": "~= 1.7.0"
+    "deferred": "^0.7.11",
+    "needle": "^2.4.1",
+    "query-string": "^6.12.1",
+    "underscore": "^1.10.2"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "exports-loader": "^0.7.0",
+    "jquery": "^3.5.0",
+    "qunit": "^2.9.3",
+    "sinon": "^9.0.2",
+    "sinon-qunit": "^2.0.0",
+    "underscore.deferred": "^0.4.0",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11"
+  },
+  "scripts": {
+    "test": "echo \"Start a server and navigate to test/index.html\" && exit 1",
+    "dev": "webpack --mode development",
+    "build": "webpack --mode production"
+  }
 }

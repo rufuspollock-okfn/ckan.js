@@ -1,21 +1,21 @@
 (function ($) {
 
-module("Utilities");
+QUnit.module("Utilities");
 
-test('_parseCkanResourceUrl', function() {
+QUnit.test('_parseCkanResourceUrl', function() {
   var resid = 'eb23e809-ccbb-4ad1-820a-19586fc4bebd';
   var url = 'http://demo.ckan.org/dataset/some-dataset/resource/' + resid;
-  var out = CKAN._parseCkanResourceUrl(url);
+  var out = CKAN.parseCkanResourceUrl(url);
   var exp = {
     resource_id: resid,
     endpoint: 'http://demo.ckan.org/api'
   }
-  deepEqual(out, exp);
+  QUnit.assert.deepEqual(out, exp);
 });
 
-module("CKAN - DataStore");
+QUnit.module("CKAN - DataStore");
 
-test('_normalizeQuery', function() {
+QUnit.test('_normalizeQuery', function() {
   var queryObj = {
     resource_id: 'xyz',
     q: 'abc',
@@ -33,69 +33,72 @@ test('_normalizeQuery', function() {
     limit: 10,
     offset: 0
   };
-  deepEqual(out, exp);
+  QUnit.assert.deepEqual(out, exp);
 });
 
-module("Catalog", {
+QUnit.module("Catalog", {
   setup: setup,
   teardown: teardown
 });
 
-test('dataset_create', function() {
+QUnit.test('dataset_create', function() {
   var apiKey = 'xyz';
-  var catalog = new CKAN.Client('', apiKey); 
+  var catalog = new CKAN.Client('', apiKey);
   var data = {};
   catalog.action('dataset_create', data, function(err, out) {
-    equal(out.status, 'ok');
+    QUnit.assert.equal(out.status, 'ok');
   });
+  QUnit.assert.equal(apiKey, 'xyz'); // dummy assert
 });
 
 // ====================================================
 
-module("CKAN - Recline", {
+QUnit.module("CKAN - Recline", {
   setup: setup,
   teardown: teardown
 });
 
-test("fetch", function() { 
+QUnit.test("fetch", function() {
   var sample_data = apiData.datastore_search;
+  QUnit.assert.equal(sample_data.help,""); // dummy assert
 
-  recline.Backend.Ckan.fetch(datasetFixture).done(function(result) {
-    deepEqual(
+  CKAN.recline.Backend.Ckan.fetch(datasetFixture).done(function(result) {
+    QUnit.assert.deepEqual(
       _.pluck(result.fields, 'id'),
       _.pluck(sample_data.result.fields, 'id')
     );
     // check we've mapped types correctly
-    equal(result.fields[3].id, 'x');
-    equal(result.fields[3].type, 'integer');
-    equal(result.fields[6].id, 'country');
-    equal(result.fields[6].type, 'string');
+    QUnit.assert.equal(result.fields[3].id, 'x');
+    QUnit.assert.equal(result.fields[3].type, 'integer');
+    QUnit.assert.equal(result.fields[6].id, 'country');
+    QUnit.assert.equal(result.fields[6].type, 'string');
 
     // (not true atm) fetch does a query so we can check for records
-    equal(result.records.length, 6);
-    equal(result.records[0].id, 0);
-    equal(result.records[0].country, 'DE');
+    QUnit.assert.equal(result.records.length, 6);
+    QUnit.assert.equal(result.records[0].id, 0);
+    QUnit.assert.equal(result.records[0].country, 'DE');
   });
 });
 
-test("query", function() { 
+QUnit.test("query", function() {
   var sample_data = apiData.datastore_search;
+  QUnit.assert.equal(sample_data.help,""); // dummy assert
 
-  recline.Backend.Ckan.query({}, datasetFixture).done(function(result) {
-    deepEqual(
+  CKAN.recline.Backend.Ckan.query({}, datasetFixture).done(function(result) {
+    QUnit.assert.deepEqual(
       _.pluck(result.fields, 'id'),
       _.pluck(sample_data.result.fields, 'id')
     );
     // check we've mapped types correctly
-    equal(result.fields[3].id, 'x');
-    equal(result.fields[3].type, 'integer');
-    equal(result.fields[6].id, 'country');
-    equal(result.fields[6].type, 'string');
+    QUnit.assert.equal(result.fields[3].id, 'x');
+    QUnit.assert.equal(result.fields[3].type, 'integer');
+    QUnit.assert.equal(result.fields[6].id, 'country');
+    QUnit.assert.equal(result.fields[6].type, 'string');
 
     // (not true atm) fetch does a query so we can check for records
-    equal(result.total, 6);
-    equal(result.hits[0].id, 0);
-    equal(result.hits[0].country, 'DE');
+    QUnit.assert.equal(result.total, 6);
+    QUnit.assert.equal(result.hits[0].id, 0);
+    QUnit.assert.equal(result.hits[0].country, 'DE');
   });
 });
 
@@ -124,123 +127,123 @@ apiData.datastore_search = {
   "result": {
     "fields": [
       {
-        "id": "_id", 
+        "id": "_id",
         "type": "int4"
-      }, 
+      },
       {
-        "id": "id", 
+        "id": "id",
         "type": "int4"
-      }, 
+      },
       {
-        "id": "date", 
+        "id": "date",
         "type": "date"
-      }, 
+      },
       {
-        "id": "x", 
+        "id": "x",
         "type": "int4"
-      }, 
+      },
       {
-        "id": "y", 
+        "id": "y",
         "type": "int4"
-      }, 
+      },
       {
-        "id": "z", 
+        "id": "z",
         "type": "int4"
-      }, 
+      },
       {
-        "id": "country", 
+        "id": "country",
         "type": "text"
-      }, 
+      },
       {
-        "id": "title", 
+        "id": "title",
         "type": "text"
-      }, 
+      },
       {
-        "id": "lat", 
+        "id": "lat",
         "type": "float8"
-      }, 
+      },
       {
-        "id": "lon", 
+        "id": "lon",
         "type": "float8"
       }
-    ], 
+    ],
     "records": [
       {
-        "_id": 1, 
-        "country": "DE", 
-        "date": "2011-01-01", 
-        "id": 0, 
-        "lat": 52.56, 
-        "lon": 13.4, 
-        "title": "first", 
-        "x": 1, 
-        "y": 2, 
+        "_id": 1,
+        "country": "DE",
+        "date": "2011-01-01",
+        "id": 0,
+        "lat": 52.56,
+        "lon": 13.4,
+        "title": "first",
+        "x": 1,
+        "y": 2,
         "z": 3
-      }, 
+      },
       {
-        "_id": 2, 
-        "country": "UK", 
-        "date": "2011-02-02", 
-        "id": 1, 
-        "lat": 54.97, 
-        "lon": -1.6, 
-        "title": "second", 
-        "x": 2, 
-        "y": 4, 
+        "_id": 2,
+        "country": "UK",
+        "date": "2011-02-02",
+        "id": 1,
+        "lat": 54.97,
+        "lon": -1.6,
+        "title": "second",
+        "x": 2,
+        "y": 4,
         "z": 24
-      }, 
+      },
       {
-        "_id": 3, 
-        "country": "US", 
-        "date": "2011-03-03", 
-        "id": 2, 
-        "lat": 40.0, 
-        "lon": -75.5, 
-        "title": "third", 
-        "x": 3, 
-        "y": 6, 
+        "_id": 3,
+        "country": "US",
+        "date": "2011-03-03",
+        "id": 2,
+        "lat": 40.0,
+        "lon": -75.5,
+        "title": "third",
+        "x": 3,
+        "y": 6,
         "z": 9
-      }, 
+      },
       {
-        "_id": 4, 
-        "country": "UK", 
-        "date": "2011-04-04", 
-        "id": 3, 
-        "lat": 57.27, 
-        "lon": -6.2, 
-        "title": "fourth", 
-        "x": 4, 
-        "y": 8, 
+        "_id": 4,
+        "country": "UK",
+        "date": "2011-04-04",
+        "id": 3,
+        "lat": 57.27,
+        "lon": -6.2,
+        "title": "fourth",
+        "x": 4,
+        "y": 8,
         "z": 6
-      }, 
+      },
       {
-        "_id": 5, 
-        "country": "UK", 
-        "date": "2011-05-04", 
-        "id": 4, 
-        "lat": 51.58, 
-        "lon": 0.0, 
-        "title": "fifth", 
-        "x": 5, 
-        "y": 10, 
+        "_id": 5,
+        "country": "UK",
+        "date": "2011-05-04",
+        "id": 4,
+        "lat": 51.58,
+        "lon": 0.0,
+        "title": "fifth",
+        "x": 5,
+        "y": 10,
         "z": 15
-      }, 
+      },
       {
-        "_id": 6, 
-        "country": "DE", 
-        "date": "2011-06-02", 
-        "id": 5, 
-        "lat": 51.04, 
-        "lon": 7.9, 
-        "title": "sixth", 
-        "x": 6, 
-        "y": 12, 
+        "_id": 6,
+        "country": "DE",
+        "date": "2011-06-02",
+        "id": 5,
+        "lat": 51.04,
+        "lon": 7.9,
+        "title": "sixth",
+        "x": 6,
+        "y": 12,
         "z": 18
       }
-    ], 
-    "resource_id": "4f1299ab-a100-4e5f-ba81-e6d234a2f3bd", 
+    ],
+    "resource_id": "4f1299ab-a100-4e5f-ba81-e6d234a2f3bd",
     "total": 6
-  }, 
+  },
   "success": true
 };
 
