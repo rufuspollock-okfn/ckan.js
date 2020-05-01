@@ -144,11 +144,12 @@ module.exports = CKAN;
       json: options.data
     };
     // https://github.com/tomas/needle#api
-    needle(
+    needle.request(
       conf.method,
       conf.url,
       conf.json, // data
       { // options
+        json: true,
         headers: conf.headers
       },
       function(err, res) {
