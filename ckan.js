@@ -153,6 +153,9 @@ module.exports = CKAN;
         headers: conf.headers
       },
       function(err, res) {
+        if (err || typeof res === undefined) {
+          return cb(err, '');
+        }
         if (!err && res && !(res.statusCode === 200 || res.statusCode === 302)) {
           err = 'CKANJS API Error. HTTP code ' + res.statusCode + '. Options: ' + JSON.stringify(options, null, 2) + ' Message: ' + JSON.stringify(res.body, null, 2);
         }

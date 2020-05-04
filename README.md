@@ -31,6 +31,12 @@ You can also use our hosted one:
 <script src="http://okfnlabs.org/ckan.js/ckan.js"></script>
 ```
 
+Using the JsDelivr CDN you can get everything you need with this webpacked bundle:
+
+```
+<script src="https://cdn.jsdelivr.net/gh/okfn/ckan.js@master/dist/ckan.bundle.js"></script>
+```
+
 ### Node
 
 ```
